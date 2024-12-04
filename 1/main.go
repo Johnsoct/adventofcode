@@ -59,7 +59,7 @@ func getPuzzleInput(url string) []byte {
 }
 
 func writeInputFile(input []byte) {
-
+	// TODO: Process input into file
 }
 
 func main() {
@@ -70,6 +70,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "ENV's not loaded")
 	}
 
-	getPuzzleInput("https://adventofcode.com/2024/day/1/input")
-	// writeInputFile(input)
+	// TODO: use input file to prevent subsequent requests to AOC servers
+	input := getPuzzleInput("https://adventofcode.com/2024/day/1/input")
+	writeInputFile(input)
 }
