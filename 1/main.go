@@ -3,18 +3,14 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
-	"io/fs"
-	"net/http"
-	"net/http/cookiejar"
 	"os"
 	"regexp"
 	"slices"
 	"strconv"
 
-	"github.com/joho/godotenv"
+        "github.com/Johnsoct/adventofcode/get"
 )
 
 func challengeFunction(file *os.File) {
@@ -35,26 +31,6 @@ func challengeFunction(file *os.File) {
 
 	fmt.Printf("Total distance is: %d\n", distance)
         fmt.Printf("The correct answer is 2000468\n")
-}
-
-func getNewHTTPClient() *http.Client {
-	jar, _ := cookiejar.New(nil)
-	client := &http.Client{
-		Jar: jar,
-	}
-
-	return client
-}
-
-func getNewRequest(url string) *http.Request {
-	r, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "formRequest(): error creating new request: %v", err)
-	}
-
-	r.AddCookie(getSessionCookie())
-
-	return r
 }
 
 func getParsedInput(rawInput io.Reader) ([]int, []int) {
@@ -82,60 +58,9 @@ func getParsedInput(rawInput io.Reader) ([]int, []int) {
 	return listOne, listTwo
 }
 
-func getSessionCookie() *http.Cookie {
-	cookie := &http.Cookie{
-		Name:  "session",
-		Value: os.Getenv("AOC_TOKEN"),
-	}
-
-	return cookie
-}
-
-func getPuzzleInput(url string) {
-	client := getNewHTTPClient()
-	req := getNewRequest(url)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not GET %s", url)
-	}
-	defer resp.Body.Close()
-
-	plainText, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "getPuzzleInput(): error reading response body: %v", err)
-	}
-
-	writeInputFile(plainText)
-}
-
-func getInputFile() (*os.File, error) {
-	file, err := os.Open("./input.txt")
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			fmt.Println("Local input file does not exist or it's empty")
-		}
-		fmt.Fprintf(os.Stderr, "getInputFile(): error reading file: %v", err)
-	} else {
-		fmt.Println("Local input file exists")
-	}
-
-	return file, err
-}
-
 func sortParsedInput(listOne, listTwo []int) [][]int {
-	// sortedListOne := make([]int, len(listOne))
-	// sortedListTwo := make([]int, len(listTwo))
 	sortedLists := make([][]int, len(listOne))
 
-	// for i, one := range listOne {
-	// 	for _, two := range listOne - 1 {
-	// 		if one > two {
-	// 			sortedListOne[i] = two
-	// 		}
-	// 	}
-	// }
-	//
 	slices.Sort(listOne)
 	slices.Sort(listTwo)
 
@@ -146,28 +71,16 @@ func sortParsedInput(listOne, listTwo []int) [][]int {
 	return sortedLists
 }
 
-func writeInputFile(input []byte) {
-	err := os.WriteFile("./input.txt", input, 0644)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "writeInputFile(): error creating file: %v", err)
-	}
-
-	fmt.Println("Local input file created")
-}
-
 func main() {
 	fmt.Println("Day one! Les get it!")
 
-	err := godotenv.Load("../.env")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ENV's not loaded")
-	}
+        get.GetEnv()
 
 	// If local file exists, do not make reqeust to AOC
-	file, err := getInputFile()
-	if err != nil {
-		getPuzzleInput("https://adventofcode.com/2024/day/1/input")
-		file, err = getInputFile()
+	file, err := get.GetInputFile()
+        if err != nil {
+		get.GetPuzzleInput("1")
+		file, err = get.GetInputFile()
 	}
 
 	challengeFunction(file)

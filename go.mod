@@ -1,4 +1,4 @@
-module github.com/Johnsoct/adventofcode/get
+module github.com/Johnsoct/adventofcode
 
 go 1.23.2
 
