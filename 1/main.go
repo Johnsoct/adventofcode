@@ -13,9 +13,7 @@ import (
         "github.com/Johnsoct/adventofcode/get"
 )
 
-func challengeFunction(file *os.File) {
-	list := sortParsedInput(getParsedInput(file))
-
+func calculateDistance(list [][]int) {
 	distance := 0
 
 	for _, val := range list {
@@ -31,6 +29,36 @@ func challengeFunction(file *os.File) {
 
 	fmt.Printf("Total distance is: %d\n", distance)
         fmt.Printf("The correct answer is 2000468\n")
+}
+
+func calculateSimilarity(list [][]int) {
+        similarityScore := 0
+
+        for _, val := range list {
+                left := val[0]
+                occurences := 0
+
+                for _, val2 := range list {
+                        right := val2[1]
+                        previousMatch := false
+
+                        if right == left {
+                                occurences += 1
+                                previousMatch = true
+                        }
+
+                        // The list is sorted, so if there was a match and no longer is
+                        // then there won't be any more matches
+                        if previousMatch && right != left {
+                                break
+                        }
+                }
+
+                similarityScore += left * occurences
+        }
+
+        fmt.Printf("Similarity score is: %d\n", similarityScore)
+        fmt.Printf("The correct answer is 18567089\n")
 }
 
 func getParsedInput(rawInput io.Reader) ([]int, []int) {
@@ -83,5 +111,8 @@ func main() {
 		file, err = get.GetInputFile()
 	}
 
-	challengeFunction(file)
+        sortedLists := sortParsedInput(getParsedInput(file))
+
+	calculateDistance(sortedLists)
+        calculateSimilarity(sortedLists)
 }
