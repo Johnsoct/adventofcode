@@ -33,7 +33,8 @@ func challengeFunction(file *os.File) {
 		}
 	}
 
-	fmt.Printf("Total distance is: %d", distance)
+	fmt.Printf("Total distance is: %d\n", distance)
+        fmt.Printf("The correct answer is 2000468\n")
 }
 
 func getNewHTTPClient() *http.Client {
