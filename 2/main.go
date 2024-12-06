@@ -19,14 +19,18 @@ func analyzeReports(reports [][]int) {
 		if getReportSafety(val, false) {
 			safeReportCount++
 		}
-                if (getReportSafety(val, true))
+		if getReportSafety(val, true) {
+			problemDampenerSafeReportCount++
+		}
 	}
 
 	fmt.Printf("Total safe reports: %d\n", safeReportCount)
-	fmt.Printf("The correct answer is 680\n")
+	fmt.Printf("Total problem dampened reports: %d\n", problemDampenerSafeReportCount)
+	fmt.Printf("The correct number of safe reports is 680\n")
+	fmt.Printf("The correct number of problem dampened reports is 680\n")
 }
 
-func getReportAdjacentLevelsAcceptable(report []int, isDecreasing, isIncreasing bool) bool {
+func getReportAdjacentLevelsAcceptable(report []int, isDecreasing, isIncreasing, problemDampener, dampened bool) bool {
 	acceptable := true
 	min := 1
 	max := 3
@@ -35,15 +39,33 @@ func getReportAdjacentLevelsAcceptable(report []int, isDecreasing, isIncreasing 
 		if isDecreasing {
 			diff := report[i] - report[i+1]
 			if diff < min || diff > max {
-				acceptable = false
-				break
+				if problemDampener {
+					if dampened {
+						acceptable = false
+						break
+					}
+					acceptable = false
+					continue
+				} else {
+					acceptable = false
+					break
+				}
 			}
 		}
 		if isIncreasing {
 			diff := report[i+1] - report[i]
 			if diff < min || diff > max {
-				acceptable = false
-				break
+				if problemDampener {
+					if dampened {
+						acceptable = false
+						break
+					}
+					acceptable = false
+					continue
+				} else {
+					acceptable = false
+					break
+				}
 			}
 		}
 	}
@@ -51,60 +73,58 @@ func getReportAdjacentLevelsAcceptable(report []int, isDecreasing, isIncreasing 
 	return acceptable
 }
 
-func getReportIsDecreasing(report []int, problemDampener bool) (bool, bool) {
-        dampened := false
-	decreasing := true
+func getReportSnowballing(report []int, direction string, problemDampener bool) (bool, bool, []int) {
+	dampened := false
+	dampenedReport := report
+	snowballing := true
 
 	for i := 0; i < len(report)-1; i++ {
-		if report[i+1] > report[i] {
-                        if problemDampener {
-                                if dampened == true {
-                                        decreasing := false
-                                        break
-                                }
-                                dampened = true
-                                continue
-                        } else {
-                                decreasing = false
-                                break
-                        }
+		condition := report[i+1] < report[i]
+		if direction == "decreasing" {
+			condition = report[i+1] > report[i]
+		}
+
+		if condition {
+			if problemDampener {
+				// If previous iteration set dampened to true
+				if dampened == true {
+					// After "removing" one problem level, still not snowballing
+					snowballing = false
+					break
+				}
+				// "Remove" this problem level; continue on
+				dampenedReport = append(dampenedReport[:i], dampenedReport[i+1:]...)
+				dampened = true
+				continue
+			} else {
+				snowballing = false
+				break
+			}
 		}
 	}
 
-	return decreasing, dampened
-}
-
-func getReportIsIncreasing(report []int, problemDampener bool) (bool, bool) {
-        dampened := false
-	increasing := true
-
-	for i := 0; i < len(report)-1; i++ {
-		if report[i+1] < report[i] {
-                        if problemDampener {
-                                if dampened == true {
-                                        increasing := false
-                                        break
-                                }
-                                dampened = true
-                                continue
-                        } else {
-                                increasing = false
-                                break
-                        }
-		}
-	}
-
-	return increasing, dampened
+	return snowballing, dampened, dampenedReport
 }
 
 func getReportSafety(report []int, problemDampener bool) bool {
-        dampened := false
+	dampened := false
 	isAdjacentLevelsAcceptable := false
-	isDecreasing, damp := getReportIsDecreasing(report, problemDampener)
-	isIncreasing, damp := getReportIsIncreasing(report, problemDampener)
+	tempReport := report
+
+	isDecreasing, damp, dampenedReport := getReportSnowballing(report, "decreasing", problemDampener)
+	if damp == true {
+		dampened = true
+		tempReport = dampenedReport
+	}
+	isIncreasing, damp, dampenedReport := getReportSnowballing(report, "increasing", problemDampener)
+	if damp == true {
+		dampened = true
+		tempReport = dampenedReport
+	}
 
 	if isDecreasing || isIncreasing {
-		isAdjacentLevelsAcceptable = getReportAdjacentLevelsAcceptable(report, isDecreasing, isIncreasing)
+		isAdjacentLevelsAcceptable = getReportAdjacentLevelsAcceptable(tempReport, isDecreasing, isIncreasing, problemDampener, dampened)
+		fmt.Printf("Dampened? %t\tOriginal: %d\tUpdated: %d\tAcceptable: %t\n", dampened, report, tempReport, isAdjacentLevelsAcceptable)
 	}
 
 	return (isDecreasing || isIncreasing) && isAdjacentLevelsAcceptable

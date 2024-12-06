@@ -10,7 +10,7 @@ import (
 	"slices"
 	"strconv"
 
-        "github.com/Johnsoct/adventofcode/get"
+	"github.com/Johnsoct/adventofcode/get"
 )
 
 func calculateDistance(list [][]int) {
@@ -28,37 +28,37 @@ func calculateDistance(list [][]int) {
 	}
 
 	fmt.Printf("Total distance is: %d\n", distance)
-        fmt.Printf("The correct answer is 2000468\n")
+	fmt.Printf("The correct answer is 2000468\n")
 }
 
 func calculateSimilarity(list [][]int) {
-        similarityScore := 0
+	similarityScore := 0
 
-        for _, val := range list {
-                left := val[0]
-                occurences := 0
+	for _, val := range list {
+		left := val[0]
+		occurences := 0
 
-                for _, val2 := range list {
-                        right := val2[1]
-                        previousMatch := false
+		for _, val2 := range list {
+			right := val2[1]
+			previousMatch := false
 
-                        if right == left {
-                                occurences += 1
-                                previousMatch = true
-                        }
+			if right == left {
+				occurences += 1
+				previousMatch = true
+			}
 
-                        // The list is sorted, so if there was a match and no longer is
-                        // then there won't be any more matches
-                        if previousMatch && right != left {
-                                break
-                        }
-                }
+			// The list is sorted, so if there was a match and no longer is
+			// then there won't be any more matches
+			if previousMatch && right != left {
+				break
+			}
+		}
 
-                similarityScore += left * occurences
-        }
+		similarityScore += left * occurences
+	}
 
-        fmt.Printf("Similarity score is: %d\n", similarityScore)
-        fmt.Printf("The correct answer is 18567089\n")
+	fmt.Printf("Similarity score is: %d\n", similarityScore)
+	fmt.Printf("The correct answer is 18567089\n")
 }
 
 func getParsedInput(rawInput io.Reader) ([]int, []int) {
@@ -102,17 +102,17 @@ func sortParsedInput(listOne, listTwo []int) [][]int {
 func main() {
 	fmt.Println("Day one! Les get it!")
 
-        get.GetEnv()
+	get.GetEnv()
 
 	// If local file exists, do not make reqeust to AOC
 	file, err := get.GetInputFile()
-        if err != nil {
+	if err != nil {
 		get.GetPuzzleInput("1")
 		file, err = get.GetInputFile()
 	}
 
-        sortedLists := sortParsedInput(getParsedInput(file))
+	sortedLists := sortParsedInput(getParsedInput(file))
 
 	calculateDistance(sortedLists)
-        calculateSimilarity(sortedLists)
+	calculateSimilarity(sortedLists)
 }

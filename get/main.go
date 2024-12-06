@@ -21,7 +21,7 @@ func GetInput(day string) (*os.File, error) {
 		file, err = GetInputFile()
 	}
 
-        return file, err
+	return file, err
 }
 
 func GetNewHTTPClient() *http.Client {
@@ -54,7 +54,7 @@ func GetSessionCookie() *http.Cookie {
 }
 
 func GetPuzzleInput(day string) {
-        url := "https://adventofcode.com/2024/day/" + day + "/input"
+	url := "https://adventofcode.com/2024/day/" + day + "/input"
 	client := GetNewHTTPClient()
 	req := GetNewRequest(url)
 
@@ -86,7 +86,7 @@ func GetInputFile() (*os.File, error) {
 	return file, err
 }
 
-func GetEnv () {
+func GetEnv() {
 	err := godotenv.Load("../.env")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ENV's not loaded")
