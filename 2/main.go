@@ -79,12 +79,12 @@ func getReportSnowballing(report []int, direction string, problemDampener bool) 
 	snowballing := true
 
 	for i := 0; i < len(report)-1; i++ {
-		condition := report[i+1] < report[i]
+		snowballCheck := report[i+1] > report[i]
 		if direction == "decreasing" {
-			condition = report[i+1] > report[i]
+			snowballCheck = report[i+1] < report[i]
 		}
 
-		if condition {
+		if !snowballCheck {
 			if problemDampener {
 				// If previous iteration set dampened to true
 				if dampened == true {
@@ -93,13 +93,13 @@ func getReportSnowballing(report []int, direction string, problemDampener bool) 
 					break
 				}
 				// "Remove" this problem level; continue on
-				dampenedReport = append(dampenedReport[:i], dampenedReport[i+1:]...)
+				dampenedReport = append(report[:i], report[i+1:]...)
 				dampened = true
 				continue
-			} else {
-				snowballing = false
-				break
 			}
+
+			snowballing = false
+			break
 		}
 	}
 
