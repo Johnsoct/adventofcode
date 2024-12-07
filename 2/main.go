@@ -75,25 +75,42 @@ func getReportAdjacentLevelsAcceptable(report []int, isDecreasing, isIncreasing,
 
 func getReportSnowballing(report []int, direction string, problemDampener bool) (bool, bool, []int) {
 	dampened := false
-	dampenedReport := report
+	dampenedReport := make([]int, len(report))
 	snowballing := true
 
-	for i := 0; i < len(report)-1; i++ {
-		snowballCheck := report[i+1] > report[i]
+	copy(dampenedReport, report)
+
+	for i := 0; i < len(dampenedReport); i++ {
+		if i == 0 {
+			continue
+		}
+
+		current := dampenedReport[i]
+		previous := dampenedReport[i-1]
+
+		fmt.Println("dampenedReport", i, dampenedReport, "current", current, "previous", previous)
+
+		snowballCheck := previous < current
 		if direction == "decreasing" {
-			snowballCheck = report[i+1] < report[i]
+			snowballCheck = previous > current
 		}
 
 		if !snowballCheck {
+			fmt.Println("check failed")
 			if problemDampener {
+				fmt.Println("problem dampener true")
 				// If previous iteration set dampened to true
 				if dampened == true {
+					fmt.Println("dampened is already true")
 					// After "removing" one problem level, still not snowballing
 					snowballing = false
 					break
 				}
+				fmt.Println("setting dampened to true")
 				// "Remove" this problem level; continue on
-				dampenedReport = append(report[:i], report[i+1:]...)
+				fmt.Println("current report", dampenedReport)
+				dampenedReport = append(dampenedReport[:i], dampenedReport[i+1:]...)
+				fmt.Println("updated report", dampenedReport)
 				dampened = true
 				continue
 			}
