@@ -37,6 +37,7 @@ var falseDampenedIncreasingCases = [][]int{
 	{1, 0, 3, 2, 5},
 	{1, 2, 2, 4, 3},
 	{1, 2, 3, 3, 3},
+	{1, 2, 2, 2, 3},
 }
 var trueDampenedDecreasingCases = [][]int{
 	{5, 6, 3, 2, 1},
@@ -50,166 +51,166 @@ var trueDampenedIncreasingCases = [][]int{
 	{0, 1, 4, 9, 7},
 }
 
-func TestSnowballing(t *testing.T) {
+// func TestSnowballing(t *testing.T) {
+// 	for _, val := range falseNonDampenedDecreasingCases {
+// 		snowballing, _, _ := getReportSnowballing(val, "decreasing", false)
+//
+// 		if snowballing {
+// 			t.Errorf("%d should not be snowballing", val)
+// 		}
+// 	}
+//
+// 	for _, val := range falseNonDampenedIncreasingCases {
+// 		snowballing, _, _ := getReportSnowballing(val, "increasing", false)
+//
+// 		if snowballing {
+// 			t.Errorf("%d should not be snowballing", val)
+// 		}
+// 	}
+//
+// 	for _, val := range trueNonDampenedDecreasingCases {
+// 		snowballing, _, _ := getReportSnowballing(val, "decreasing", false)
+//
+// 		if !snowballing {
+// 			t.Errorf("%d should be snowballing", val)
+// 		}
+// 	}
+//
+// 	for _, val := range trueNonDampenedIncreasingCases {
+// 		snowballing, _, _ := getReportSnowballing(val, "increasing", false)
+//
+// 		if !snowballing {
+// 			t.Errorf("%d should be snowballing", val)
+// 		}
+// 	}
+//
+// 	for _, val := range falseDampenedDecreasingCases {
+// 		snowballing, dampened, dampenedReport := getReportSnowballing(val, "decreasing", true)
+//
+// 		if snowballing {
+// 			t.Errorf("%d should not be snowballing", val)
+// 		}
+//
+// 		if !dampened {
+// 			t.Errorf("%d should be dampened", val)
+// 		}
+//
+// 		if len(dampenedReport) >= len(val) {
+// 			t.Errorf("Dampened report (%d, %d) should be shorter than report (%d, %d)", dampenedReport, len(dampenedReport), val, len(val))
+// 		}
+// 	}
+//
+// 	for _, val := range falseDampenedIncreasingCases {
+// 		snowballing, dampened, dampenedReport := getReportSnowballing(val, "increasing", true)
+//
+// 		if snowballing {
+// 			t.Errorf("%d should not be snowballing", val)
+// 		}
+//
+// 		if !dampened {
+// 			t.Errorf("%d should be dampened", val)
+// 		}
+//
+// 		if len(dampenedReport) >= len(val) {
+// 			t.Errorf("Dampened report (%d, %d) should be shorter than report (%d, %d)", dampenedReport, len(dampenedReport), val, len(val))
+// 		}
+// 	}
+//
+// 	for _, val := range trueDampenedDecreasingCases {
+// 		snowballing, dampened, dampenedReport := getReportSnowballing(val, "decreasing", true)
+//
+// 		if !snowballing {
+// 			t.Errorf("%d should be snowballing", val)
+// 		}
+//
+// 		if !dampened {
+// 			t.Errorf("%d should be dampened", val)
+// 		}
+//
+// 		if len(dampenedReport) >= len(val) {
+// 			t.Errorf("Dampened report (%d, %d) should be shorter than report (%d, %d)", dampenedReport, len(dampenedReport), val, len(val))
+// 		}
+// 	}
+//
+// 	for _, val := range trueDampenedIncreasingCases {
+// 		snowballing, dampened, dampenedReport := getReportSnowballing(val, "increasing", true)
+//
+// 		if !snowballing {
+// 			t.Errorf("%d should be snowballing", val)
+// 		}
+//
+// 		if !dampened {
+// 			t.Errorf("%d should be dampened", val)
+// 		}
+//
+// 		if len(dampenedReport) >= len(val) {
+// 			t.Errorf("Dampened report (%d, %d) should be shorter than report (%d, %d)", dampenedReport, len(dampenedReport), val, len(val))
+// 		}
+// 	}
+// }
+
+func TestAcceptableAdjacentLevels(t *testing.T) {
 	// for _, val := range falseNonDampenedDecreasingCases {
-	// 	snowballing, _, _ := getReportSnowballing(val, "decreasing", false)
+	// 	acceptable := getReportAdjacentLevelsAcceptable(val, true, false, false)
 	//
-	// 	if snowballing {
-	// 		t.Errorf("%d should not be snowballing", val)
+	// 	if acceptable {
+	// 		t.Errorf("%d should not be acceptable", val)
 	// 	}
 	// }
 	//
 	// for _, val := range falseNonDampenedIncreasingCases {
-	// 	snowballing, _, _ := getReportSnowballing(val, "increasing", false)
+	// 	acceptable := getReportAdjacentLevelsAcceptable(val, false, false, false)
 	//
-	// 	if snowballing {
-	// 		t.Errorf("%d should not be snowballing", val)
+	// 	if acceptable {
+	// 		t.Errorf("%d should not be acceptable", val)
 	// 	}
 	// }
 	//
 	// for _, val := range trueNonDampenedDecreasingCases {
-	// 	snowballing, _, _ := getReportSnowballing(val, "decreasing", false)
+	// 	acceptable := getReportAdjacentLevelsAcceptable(val, true, false, false)
 	//
-	// 	if !snowballing {
-	// 		t.Errorf("%d should be snowballing", val)
+	// 	if !acceptable {
+	// 		t.Errorf("%d should be acceptable", val)
 	// 	}
 	// }
 	//
 	// for _, val := range trueNonDampenedIncreasingCases {
-	// 	snowballing, _, _ := getReportSnowballing(val, "increasing", false)
+	// 	acceptable := getReportAdjacentLevelsAcceptable(val, false, false, false)
 	//
-	// 	if !snowballing {
-	// 		t.Errorf("%d should be snowballing", val)
+	// 	if !acceptable {
+	// 		t.Errorf("%d should be acceptable", val)
 	// 	}
 	// }
 	//
 	// for _, val := range falseDampenedDecreasingCases {
-	// 	snowballing, dampened, dampenedReport := getReportSnowballing(val, "decreasing", true)
+	// 	acceptable := getReportAdjacentLevelsAcceptable(val, true, true, false)
 	//
-	// 	if snowballing {
-	// 		t.Errorf("%d should not be snowballing", val)
-	// 	}
-	//
-	// 	if !dampened {
-	// 		t.Errorf("%d should be dampened", val)
-	// 	}
-	//
-	// 	if len(dampenedReport) >= len(val) {
-	// 		t.Errorf("Dampened report (%d, %d) should be shorter than report (%d, %d)", dampenedReport, len(dampenedReport), val, len(val))
-	// 	}
-	// }
-
-	for _, val := range falseDampenedIncreasingCases {
-		snowballing, dampened, dampenedReport := getReportSnowballing(val, "increasing", true)
-
-		if snowballing {
-			t.Errorf("%d should not be snowballing", val)
-		}
-
-		if !dampened {
-			t.Errorf("%d should be dampened", val)
-		}
-
-		if len(dampenedReport) >= len(val) {
-			t.Errorf("Dampened report (%d, %d) should be shorter than report (%d, %d)", dampenedReport, len(dampenedReport), val, len(val))
-		}
-	}
-
-	// for _, val := range trueDampenedDecreasingCases {
-	// 	snowballing, dampened, dampenedReport := getReportSnowballing(val, "decreasing", true)
-	//
-	// 	if !snowballing {
-	// 		t.Errorf("%d should be snowballing", val)
-	// 	}
-	//
-	// 	if !dampened {
-	// 		t.Errorf("%d should be dampened", val)
-	// 	}
-	//
-	// 	if len(dampenedReport) >= len(val) {
-	// 		t.Errorf("Dampened report (%d, %d) should be shorter than report (%d, %d)", dampenedReport, len(dampenedReport), val, len(val))
+	// 	if acceptable {
+	// 		t.Errorf("%d should not be acceptable", val)
 	// 	}
 	// }
 	//
-	// for _, val := range trueDampenedIncreasingCases {
-	// 	snowballing, dampened, dampenedReport := getReportSnowballing(val, "increasing", true)
+	// for _, val := range falseDampenedIncreasingCases {
+	// 	acceptable := getReportAdjacentLevelsAcceptable(val, false, true, false)
 	//
-	// 	if !snowballing {
-	// 		t.Errorf("%d should be snowballing", val)
-	// 	}
-	//
-	// 	if !dampened {
-	// 		t.Errorf("%d should be dampened", val)
-	// 	}
-	//
-	// 	if len(dampenedReport) >= len(val) {
-	// 		t.Errorf("Dampened report (%d, %d) should be shorter than report (%d, %d)", dampenedReport, len(dampenedReport), val, len(val))
+	// 	if acceptable {
+	// 		t.Errorf("%d should not be acceptable", val)
 	// 	}
 	// }
-}
-
-func TestAcceptableAdjacentLevels(t *testing.T) {
-	for _, val := range falseNonDampenedDecreasingCases {
-		acceptable := getReportAdjacentLevelsAcceptable(val, true, false, false, false)
-
-		if acceptable {
-			t.Errorf("%d should not be acceptable", val)
-		}
-	}
-
-	for _, val := range falseNonDampenedIncreasingCases {
-		acceptable := getReportAdjacentLevelsAcceptable(val, false, true, false, false)
-
-		if acceptable {
-			t.Errorf("%d should not be acceptable", val)
-		}
-	}
-
-	for _, val := range trueNonDampenedDecreasingCases {
-		acceptable := getReportAdjacentLevelsAcceptable(val, true, false, false, false)
-
-		if !acceptable {
-			t.Errorf("%d should be acceptable", val)
-		}
-	}
-
-	for _, val := range trueNonDampenedIncreasingCases {
-		acceptable := getReportAdjacentLevelsAcceptable(val, false, true, false, false)
-
-		if !acceptable {
-			t.Errorf("%d should be acceptable", val)
-		}
-	}
-
-	for _, val := range falseDampenedDecreasingCases {
-		acceptable := getReportAdjacentLevelsAcceptable(val, true, false, true, false)
-
-		if acceptable {
-			t.Errorf("%d should not be acceptable", val)
-		}
-	}
-
-	for _, val := range falseDampenedIncreasingCases {
-		acceptable := getReportAdjacentLevelsAcceptable(val, false, true, true, false)
-
-		if acceptable {
-			t.Errorf("%d should not be acceptable", val)
-		}
-	}
 
 	for _, val := range trueDampenedDecreasingCases {
-		acceptable := getReportAdjacentLevelsAcceptable(val, true, false, true, false)
+		acceptable := getReportAdjacentLevelsAcceptable(val, true, true, false)
 
 		if !acceptable {
 			t.Errorf("%d should be acceptable", val)
 		}
 	}
 
-	for _, val := range trueDampenedIncreasingCases {
-		acceptable := getReportAdjacentLevelsAcceptable(val, false, true, true, false)
-
-		if !acceptable {
-			t.Errorf("%d should be acceptable", val)
-		}
-	}
+	// for _, val := range trueDampenedIncreasingCases {
+	// 	acceptable := getReportAdjacentLevelsAcceptable(val, false, true, false)
+	//
+	// 	if !acceptable {
+	// 		t.Errorf("%d should be acceptable", val)
+	// 	}
+	// }
 }

@@ -30,94 +30,119 @@ func analyzeReports(reports [][]int) {
 	fmt.Printf("The correct number of problem dampened reports is 680\n")
 }
 
-func getReportAdjacentLevelsAcceptable(report []int, isDecreasing, isIncreasing, problemDampener, dampened bool) bool {
-	acceptable := true
+func getAdjacentCondition(report []int, i int, isDecreasing bool) bool {
+	current := report[i]
 	min := 1
 	max := 3
+	next := report[i+1]
 
-	for i := 0; i < len(report)-1; i++ {
-		if isDecreasing {
-			diff := report[i] - report[i+1]
-			if diff < min || diff > max {
-				if problemDampener {
-					if dampened {
-						acceptable = false
-						break
-					}
-					acceptable = false
-					continue
-				} else {
-					acceptable = false
+	diff := next - current
+	if isDecreasing {
+		diff = current - next
+	}
+	fmt.Println("adjacent condition", i, report, "current", current, "next", next, "condition", diff < min || diff > max)
+
+	return diff < min || diff > max
+}
+
+func getReportAdjacentLevelsAcceptable(report []int, isDecreasing, problemDampener, damp bool) bool {
+	acceptable := true
+	dampened := damp
+	i := 0 // Artificially control loop index to psuedo recurse loop iteration
+	temp := make([]int, len(report))
+
+	copy(temp, report)
+
+	for i < len(report)-1 {
+		if getAdjacentCondition(report, i, isDecreasing) {
+			if problemDampener {
+				a, r, d := ifProblemDampener(temp, i, dampened)
+				fmt.Println(a, r, d)
+
+				acceptable = a
+				dampened = d
+				temp = r
+
+				if !acceptable {
 					break
 				}
+
+				// Do not increase index; "recursion" with updated temp
+				continue
+			} else {
+				acceptable = false
+				break
 			}
 		}
-		if isIncreasing {
-			diff := report[i+1] - report[i]
-			if diff < min || diff > max {
-				if problemDampener {
-					if dampened {
-						acceptable = false
-						break
-					}
-					acceptable = false
-					continue
-				} else {
-					acceptable = false
-					break
-				}
-			}
-		}
+
+		i++
 	}
 
 	return acceptable
 }
 
+func getSnowBallCheck(report []int, index int, direction string) bool {
+	current := report[index]
+	next := report[index+1]
+
+	// fmt.Println("dampenedReport", index, report, "current", current, "previous", previous)
+
+	snowballCheck := next > current
+	if direction == "decreasing" {
+		snowballCheck = next < current
+	}
+
+	return snowballCheck
+}
+
+func ifProblemDampener(report []int, i int, damp bool) (bool, []int, bool) {
+	acceptable := true
+	dampened := damp
+	temp := make([]int, len(report))
+
+	copy(temp, report)
+
+	if dampened == true {
+		// If temp has already had one level removed, it is no longer acceptable
+		acceptable = false
+	} else {
+		dampened = true
+		temp = append(temp[:i], temp[i+1:]...) // "Remove" this problem level; continue on
+	}
+
+	return acceptable, temp, dampened
+}
+
 func getReportSnowballing(report []int, direction string, problemDampener bool) (bool, bool, []int) {
 	dampened := false
 	dampenedReport := make([]int, len(report))
+	i := 0 // Control the index for when we remove a level from dampenedReport (psuedo recursion)
 	snowballing := true
 
 	copy(dampenedReport, report)
 
-	for i := 0; i < len(dampenedReport); i++ {
-		if i == 0 {
-			continue
-		}
-
-		current := dampenedReport[i]
-		previous := dampenedReport[i-1]
-
-		fmt.Println("dampenedReport", i, dampenedReport, "current", current, "previous", previous)
-
-		snowballCheck := previous < current
-		if direction == "decreasing" {
-			snowballCheck = previous > current
-		}
-
-		if !snowballCheck {
-			fmt.Println("check failed")
+	for i < len(dampenedReport)-1 {
+		if !getSnowBallCheck(dampenedReport, i, direction) {
 			if problemDampener {
-				fmt.Println("problem dampener true")
-				// If previous iteration set dampened to true
-				if dampened == true {
-					fmt.Println("dampened is already true")
-					// After "removing" one problem level, still not snowballing
-					snowballing = false
+				a, r, d := ifProblemDampener(dampenedReport, i, dampened)
+
+				dampened = d
+				dampenedReport = r
+				snowballing = a
+
+				if !snowballing {
 					break
 				}
-				fmt.Println("setting dampened to true")
-				// "Remove" this problem level; continue on
-				fmt.Println("current report", dampenedReport)
-				dampenedReport = append(dampenedReport[:i], dampenedReport[i+1:]...)
-				fmt.Println("updated report", dampenedReport)
-				dampened = true
-				continue
-			}
 
-			snowballing = false
-			break
+				// Do not increase index; "recursion" with updated dampenedReport
+				continue
+			} else {
+				snowballing = false
+				break
+			}
 		}
+
+		i++
 	}
 
 	return snowballing, dampened, dampenedReport
@@ -140,7 +165,7 @@ func getReportSafety(report []int, problemDampener bool) bool {
 	}
 
 	if isDecreasing || isIncreasing {
-		isAdjacentLevelsAcceptable = getReportAdjacentLevelsAcceptable(tempReport, isDecreasing, isIncreasing, problemDampener, dampened)
+		isAdjacentLevelsAcceptable = getReportAdjacentLevelsAcceptable(tempReport, isDecreasing, problemDampener, dampened)
 		fmt.Printf("Dampened? %t\tOriginal: %d\tUpdated: %d\tAcceptable: %t\n", dampened, report, tempReport, isAdjacentLevelsAcceptable)
 	}
 
