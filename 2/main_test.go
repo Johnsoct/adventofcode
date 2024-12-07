@@ -150,56 +150,105 @@ var trueDampenedIncreasingCases = [][]int{
 // }
 
 func TestAcceptableAdjacentLevels(t *testing.T) {
-	// for _, val := range falseNonDampenedDecreasingCases {
-	// 	acceptable := getReportAdjacentLevelsAcceptable(val, true, false, false)
-	//
-	// 	if acceptable {
-	// 		t.Errorf("%d should not be acceptable", val)
-	// 	}
-	// }
-	//
-	// for _, val := range falseNonDampenedIncreasingCases {
-	// 	acceptable := getReportAdjacentLevelsAcceptable(val, false, false, false)
-	//
-	// 	if acceptable {
-	// 		t.Errorf("%d should not be acceptable", val)
-	// 	}
-	// }
-	//
-	// for _, val := range trueNonDampenedDecreasingCases {
-	// 	acceptable := getReportAdjacentLevelsAcceptable(val, true, false, false)
-	//
-	// 	if !acceptable {
-	// 		t.Errorf("%d should be acceptable", val)
-	// 	}
-	// }
-	//
-	// for _, val := range trueNonDampenedIncreasingCases {
-	// 	acceptable := getReportAdjacentLevelsAcceptable(val, false, false, false)
-	//
-	// 	if !acceptable {
-	// 		t.Errorf("%d should be acceptable", val)
-	// 	}
-	// }
-	//
-	// for _, val := range falseDampenedDecreasingCases {
-	// 	acceptable := getReportAdjacentLevelsAcceptable(val, true, true, false)
-	//
-	// 	if acceptable {
-	// 		t.Errorf("%d should not be acceptable", val)
-	// 	}
-	// }
-	//
+	var cases = [][]int{}
+
+	cases = [][]int{
+		{15, 12, 8, 5, 3},
+		{15, 11, 6, 4, 2},
+	}
+	for _, val := range cases {
+		isDecreasing := true
+		problemDampening := false
+		damp := false
+		acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
+
+		if acceptable {
+			t.Errorf("%d should not be acceptable", val)
+		}
+	}
+
+	cases = [][]int{
+		{1, 5, 8, 12, 15},
+		{2, 4, 6, 11, 15},
+	}
+	for _, val := range cases {
+		isDecreasing := false
+		problemDampening := false
+		damp := false
+		acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
+
+		if acceptable {
+			t.Errorf("%d should not be acceptable", val)
+		}
+	}
+
+	cases = [][]int{
+		{5, 4, 3, 2, 1},
+		{10, 8, 6, 4, 2},
+		{15, 12, 9, 6, 3},
+	}
+	for _, val := range cases {
+		isDecreasing := true
+		problemDampening := false
+		damp := false
+		acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
+
+		if !acceptable {
+			t.Errorf("%d should be acceptable", val)
+		}
+	}
+
+	cases = [][]int{
+		{1, 2, 3, 4, 5},
+		{2, 4, 6, 8, 10},
+		{3, 6, 9, 12, 15},
+	}
+	for _, val := range cases {
+		isDecreasing := false
+		problemDampening := false
+		damp := false
+		acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
+
+		if !acceptable {
+			t.Errorf("%d should be acceptable", val)
+		}
+	}
+
+	cases = [][]int{
+		{},
+	}
+	for _, val := range falseDampenedDecreasingCases {
+		isDecreasing := true
+		problemDampening := true
+		damp := false
+		acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
+
+		if acceptable {
+			t.Errorf("%d should not be acceptable", val)
+		}
+	}
+
 	// for _, val := range falseDampenedIncreasingCases {
-	// 	acceptable := getReportAdjacentLevelsAcceptable(val, false, true, false)
+	//               isDecreasing := false
+	//               problemDampening := true
+	//               damp := false
+	// acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
 	//
 	// 	if acceptable {
 	// 		t.Errorf("%d should not be acceptable", val)
 	// 	}
 	// }
 
-	for _, val := range trueDampenedDecreasingCases {
-		acceptable := getReportAdjacentLevelsAcceptable(val, true, true, false)
+	cases = [][]int{
+		{5, 4, 3, 2, 1},
+		{10, 8, 6, 4, 2},
+		{15, 12, 9, 6, 3},
+	}
+	for _, val := range cases {
+		isDecreasing := true
+		problemDampening := true
+		damp := false
+		acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
 
 		if !acceptable {
 			t.Errorf("%d should be acceptable", val)
@@ -207,7 +256,10 @@ func TestAcceptableAdjacentLevels(t *testing.T) {
 	}
 
 	// for _, val := range trueDampenedIncreasingCases {
-	// 	acceptable := getReportAdjacentLevelsAcceptable(val, false, true, false)
+	//               isDecreasing := false
+	//               problemDampening := true
+	//               damp := false
+	// acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
 	//
 	// 	if !acceptable {
 	// 		t.Errorf("%d should be acceptable", val)

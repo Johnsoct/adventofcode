@@ -40,7 +40,7 @@ func getAdjacentCondition(report []int, i int, isDecreasing bool) bool {
 	if isDecreasing {
 		diff = current - next
 	}
-	fmt.Println("adjacent condition", i, report, "current", current, "next", next, "condition", diff < min || diff > max)
+	// fmt.Println("adjacent condition", i, report, "current", current, "next", next, "condition", diff < min || diff > max)
 
 	return diff < min || diff > max
 }
@@ -53,11 +53,11 @@ func getReportAdjacentLevelsAcceptable(report []int, isDecreasing, problemDampen
 
 	copy(temp, report)
 
-	for i < len(report)-1 {
-		if getAdjacentCondition(report, i, isDecreasing) {
+	for i < len(temp)-1 {
+		if getAdjacentCondition(temp, i, isDecreasing) {
 			if problemDampener {
 				a, r, d := ifProblemDampener(temp, i, dampened)
-				fmt.Println(a, r, d)
+				// fmt.Println(a, r, d)
 
 				acceptable = a
 				dampened = d
@@ -151,14 +151,16 @@ func getReportSnowballing(report []int, direction string, problemDampener bool) 
 func getReportSafety(report []int, problemDampener bool) bool {
 	dampened := false
 	isAdjacentLevelsAcceptable := false
-	tempReport := report
+	tempReport := make([]int, len(report))
 
-	isDecreasing, damp, dampenedReport := getReportSnowballing(report, "decreasing", problemDampener)
+	copy(tempReport, report)
+
+	isDecreasing, damp, dampenedReport := getReportSnowballing(tempReport, "decreasing", problemDampener)
 	if damp == true {
 		dampened = true
 		tempReport = dampenedReport
 	}
-	isIncreasing, damp, dampenedReport := getReportSnowballing(report, "increasing", problemDampener)
+	isIncreasing, damp, dampenedReport := getReportSnowballing(tempReport, "increasing", problemDampener)
 	if damp == true {
 		dampened = true
 		tempReport = dampenedReport
