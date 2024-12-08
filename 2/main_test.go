@@ -1,6 +1,7 @@
 package main
 
 import (
+	"slices"
 	"testing"
 )
 
@@ -265,4 +266,56 @@ func TestAcceptableAdjacentLevels(t *testing.T) {
 	// 		t.Errorf("%d should be acceptable", val)
 	// 	}
 	// }
+}
+
+func TestGetDirection(t *testing.T) {
+	type expectation struct {
+		direction     string
+		dampened      bool
+		reportToMatch bool
+		safe          bool
+	}
+	type testcase struct {
+		dampening bool
+		expect    expectation
+		reports   [][]int
+	}
+
+	reports := [][]int{
+		{5, 4, 3, 2, 1},
+		{10, 8, 6, 4, 2},
+		{15, 12, 9, 6, 3},
+		{3, 2, 1},
+		{3, 2},
+	}
+	cases := testcase{
+		dampening: false,
+		expect: expectation{
+			direction:     "decreasing",
+			dampened:      false,
+			reportToMatch: true,
+			safe:          true,
+		},
+		reports: reports,
+	}
+
+	for _, val := range cases.reports {
+		direction, dampened, temp, safe := getDirection(val, cases.dampening)
+
+		if direction != cases.expect.direction {
+			t.Errorf("Direction (%s) is wrong", direction)
+		}
+
+		if dampened != cases.expect.dampened {
+			t.Errorf("Dampened (%t) is wrong", dampened)
+		}
+
+		if slices.Equal(temp, val) != cases.expect.reportToMatch {
+			t.Errorf("Updated report slice (%d) is wrong", temp)
+		}
+
+		if safe != cases.expect.safe {
+			t.Errorf("Safe (%t) is wrong", safe)
+		}
+	}
 }

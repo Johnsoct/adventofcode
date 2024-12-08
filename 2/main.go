@@ -11,6 +11,116 @@ import (
 	"github.com/Johnsoct/adventofcode/get"
 )
 
+func deleteSliceIndex[S ~[]E, E any](s S, i int) S {
+	oldLen := len(s)
+	tempI := i
+	tempS := make(S, len(s))
+
+	copy(tempS, s)
+
+	if i == 0 {
+		tempI = 1
+	}
+	if oldLen == i {
+		return s
+	}
+
+	fmt.Println("old:", tempS)
+	fmt.Println("index:", tempI, oldLen)
+	fmt.Println("end", tempS[:tempI])
+	fmt.Println("start", tempS[tempI+1:])
+	tempS = append(tempS[:tempI], tempS[tempI+1:]...)
+	fmt.Println("new:", tempS)
+	fmt.Println()
+	clear(tempS[len(tempS):oldLen]) // zero/nil out obsolete elements (GC)
+
+	return tempS
+}
+
+func getDirectionDecreasingComparison(report []int, i int) bool {
+	return report[i] > report[i+1]
+}
+
+func getDirectionIncreasingComparison(report []int, i int) bool {
+	return report[i] < report[i+1]
+}
+
+func getDirection(report []int, dampening bool) (string, bool, []int, bool) {
+	dampened := false
+	direction := "increasing" // default
+	i := 0                    // Control index to psuedo recurse
+	safe := true
+	temp := make([]int, len(report))
+
+	copy(temp, report)
+
+	// Logic:
+	// In default direction,
+	// 1.   Compare index 0 to index 1
+	// 1a.  IF true, compare index 1 to index 2
+	// 1aa. IF true, is default direction
+	// 1ab. IF false, remove index 2, and if dampened != true, try 1a again
+	// 1b.  Remove index 1, and if dampened != true, try 1 again
+	//
+	// If #1 does not return the default direction, repeat with the opposite direction
+
+	for range len(temp) - 1 {
+		if !getDirectionIncreasingComparison(temp, i) {
+			if dampened {
+				safe = false
+				break
+			}
+
+			if dampening {
+				dampened = true
+				temp = deleteSliceIndex(temp, i)
+				continue
+			} else {
+				safe = false
+				break
+			}
+		}
+
+		i++
+	}
+
+	// If report wasn't increasing...
+	if !safe {
+		// reset loop state
+		i = 0
+		safe = true
+		temp = make([]int, len(report))
+
+		copy(temp, report)
+
+		for range len(temp) - 1 {
+			if !getDirectionDecreasingComparison(temp, i) {
+				if dampened {
+					safe = false
+					break
+				}
+
+				if dampening {
+					dampened = true
+					temp = deleteSliceIndex(temp, i)
+					continue
+				} else {
+					safe = false
+					break
+				}
+			}
+
+			i++
+		}
+
+		if safe {
+			direction = "decreasing"
+		}
+	}
+
+	return direction, dampened, temp, safe
+}
+
 func analyzeReports(reports [][]int) {
 	problemDampenerSafeReportCount := 0
 	safeReportCount := 0
