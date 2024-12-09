@@ -1,286 +1,181 @@
 package main
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 )
 
-// False nondampened cases mean there is at least one level not decreasing/increasing
-// from the previous level
-var falseNonDampenedDecreasingCases = [][]int{
-	{5, 4, 6, 2, 1},
-	{10, 8, 9, 4, 2},
-	{15, 12, 13, 6, 3},
+type expectation struct {
+	direction     string
+	dampened      bool
+	reportToMatch bool
+	safe          bool
 }
-var falseNonDampenedIncreasingCases = [][]int{
-	{1, 2, 0, 4, 5},
-	{2, 4, 3, 8, 10},
-	{3, 6, 5, 12, 15},
+type adjacentExpect struct {
+	safe bool
 }
-var trueNonDampenedDecreasingCases = [][]int{
-	{5, 4, 3, 2, 1},
-	{10, 8, 6, 4, 2},
-	{15, 12, 9, 6, 3},
+type adjacentTest struct {
+	dampened  bool
+	dampening bool
+	direction string
+	expect    adjacentExpect
+	reports   [][]int
 }
-var trueNonDampenedIncreasingCases = [][]int{
-	{1, 2, 3, 4, 5},
-	{2, 4, 6, 8, 10},
-	{3, 6, 9, 12, 15},
-}
-
-// False dampened cases mean there are more than one problem levels
-var falseDampenedDecreasingCases = [][]int{
-	{5, 6, 3, 4, 1},
-	{5, 4, 5, 2, 3},
-	{15, 9, 12, 4, 6},
-}
-var falseDampenedIncreasingCases = [][]int{
-	{1, 0, 3, 2, 5},
-	{1, 2, 2, 4, 3},
-	{1, 2, 3, 3, 3},
-	{1, 2, 2, 2, 3},
-}
-var trueDampenedDecreasingCases = [][]int{
-	{5, 6, 3, 2, 1},
-	{10, 8, 11, 5, 4},
-	{6, 12, 9, 6, 3},
-}
-var trueDampenedIncreasingCases = [][]int{
-	{1, 3, 2, 4, 5},
-	{2, 4, 6, 10, 8},
-	{3, 6, 11, 9, 12},
-	{0, 1, 4, 9, 7},
+type directionTest struct {
+	dampening bool
+	expect    expectation
+	reports   [][]int
 }
 
-// func TestSnowballing(t *testing.T) {
-// 	for _, val := range falseNonDampenedDecreasingCases {
-// 		snowballing, _, _ := getReportSnowballing(val, "decreasing", false)
-//
-// 		if snowballing {
-// 			t.Errorf("%d should not be snowballing", val)
-// 		}
-// 	}
-//
-// 	for _, val := range falseNonDampenedIncreasingCases {
-// 		snowballing, _, _ := getReportSnowballing(val, "increasing", false)
-//
-// 		if snowballing {
-// 			t.Errorf("%d should not be snowballing", val)
-// 		}
-// 	}
-//
-// 	for _, val := range trueNonDampenedDecreasingCases {
-// 		snowballing, _, _ := getReportSnowballing(val, "decreasing", false)
-//
-// 		if !snowballing {
-// 			t.Errorf("%d should be snowballing", val)
-// 		}
-// 	}
-//
-// 	for _, val := range trueNonDampenedIncreasingCases {
-// 		snowballing, _, _ := getReportSnowballing(val, "increasing", false)
-//
-// 		if !snowballing {
-// 			t.Errorf("%d should be snowballing", val)
-// 		}
-// 	}
-//
-// 	for _, val := range falseDampenedDecreasingCases {
-// 		snowballing, dampened, dampenedReport := getReportSnowballing(val, "decreasing", true)
-//
-// 		if snowballing {
-// 			t.Errorf("%d should not be snowballing", val)
-// 		}
-//
-// 		if !dampened {
-// 			t.Errorf("%d should be dampened", val)
-// 		}
-//
-// 		if len(dampenedReport) >= len(val) {
-// 			t.Errorf("Dampened report (%d, %d) should be shorter than report (%d, %d)", dampenedReport, len(dampenedReport), val, len(val))
-// 		}
-// 	}
-//
-// 	for _, val := range falseDampenedIncreasingCases {
-// 		snowballing, dampened, dampenedReport := getReportSnowballing(val, "increasing", true)
-//
-// 		if snowballing {
-// 			t.Errorf("%d should not be snowballing", val)
-// 		}
-//
-// 		if !dampened {
-// 			t.Errorf("%d should be dampened", val)
-// 		}
-//
-// 		if len(dampenedReport) >= len(val) {
-// 			t.Errorf("Dampened report (%d, %d) should be shorter than report (%d, %d)", dampenedReport, len(dampenedReport), val, len(val))
-// 		}
-// 	}
-//
-// 	for _, val := range trueDampenedDecreasingCases {
-// 		snowballing, dampened, dampenedReport := getReportSnowballing(val, "decreasing", true)
-//
-// 		if !snowballing {
-// 			t.Errorf("%d should be snowballing", val)
-// 		}
-//
-// 		if !dampened {
-// 			t.Errorf("%d should be dampened", val)
-// 		}
-//
-// 		if len(dampenedReport) >= len(val) {
-// 			t.Errorf("Dampened report (%d, %d) should be shorter than report (%d, %d)", dampenedReport, len(dampenedReport), val, len(val))
-// 		}
-// 	}
-//
-// 	for _, val := range trueDampenedIncreasingCases {
-// 		snowballing, dampened, dampenedReport := getReportSnowballing(val, "increasing", true)
-//
-// 		if !snowballing {
-// 			t.Errorf("%d should be snowballing", val)
-// 		}
-//
-// 		if !dampened {
-// 			t.Errorf("%d should be dampened", val)
-// 		}
-//
-// 		if len(dampenedReport) >= len(val) {
-// 			t.Errorf("Dampened report (%d, %d) should be shorter than report (%d, %d)", dampenedReport, len(dampenedReport), val, len(val))
-// 		}
-// 	}
-// }
+func TestDeleteSliceIndex(t *testing.T) {
+	s := deleteSliceIndex([]int{1, 2, 3, 4, 5}, 0)
+	if !slices.Equal(s, []int{2, 3, 4, 5}) {
+		t.Errorf("Deleting slice index 0 (%d)", s)
+	}
+
+	s = deleteSliceIndex([]int{1, 2, 3, 4, 5}, 1)
+	if !slices.Equal(s, []int{1, 3, 4, 5}) {
+		t.Errorf("Deleting slice index 1 (%d)", s)
+	}
+
+	s = deleteSliceIndex([]int{1, 2, 3, 4, 5}, 2)
+	if !slices.Equal(s, []int{1, 2, 4, 5}) {
+		t.Errorf("Deleting slice index 2 (%d)", s)
+	}
+
+	s = deleteSliceIndex([]int{1, 2, 3, 4, 5}, 3)
+	if !slices.Equal(s, []int{1, 2, 3, 5}) {
+		t.Errorf("Deleting slice index 3 (%d)", s)
+	}
+
+	s = deleteSliceIndex([]int{1, 2, 3, 4, 5}, 4)
+	if !slices.Equal(s, []int{1, 2, 3, 4}) {
+		t.Errorf("Deleting slice index last (%d)", s)
+	}
+
+	s = deleteSliceIndex([]int{1, 2, 3, 4, 5}, len([]int{1, 2, 3, 4, 5})-1)
+	if !slices.Equal(s, []int{1, 2, 3, 4}) {
+		t.Errorf("Deleting slice index last (%d)", s)
+	}
+}
+
+func getAdjacentLevelsTestLoop(t *testing.T, cases adjacentTest) bool {
+	pass := true
+
+	for _, val := range cases.reports {
+		safe := getReportAdjacentLevelsAcceptable(val, cases.direction, cases.dampening, cases.dampened)
+
+		if safe != cases.expect.safe {
+			pass = false
+			t.Errorf("Safe (%t) is wrong", safe)
+		}
+	}
+
+	return pass
+}
 
 func TestAcceptableAdjacentLevels(t *testing.T) {
-	var cases = [][]int{}
-
-	cases = [][]int{
-		{15, 12, 8, 5, 3},
-		{15, 11, 6, 4, 2},
-	}
-	for _, val := range cases {
-		isDecreasing := true
-		problemDampening := false
-		damp := false
-		acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
-
-		if acceptable {
-			t.Errorf("%d should not be acceptable", val)
-		}
-	}
-
-	cases = [][]int{
-		{1, 5, 8, 12, 15},
-		{2, 4, 6, 11, 15},
-	}
-	for _, val := range cases {
-		isDecreasing := false
-		problemDampening := false
-		damp := false
-		acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
-
-		if acceptable {
-			t.Errorf("%d should not be acceptable", val)
-		}
-	}
-
-	cases = [][]int{
+	reports := [][]int{
 		{5, 4, 3, 2, 1},
 		{10, 8, 6, 4, 2},
 		{15, 12, 9, 6, 3},
 	}
-	for _, val := range cases {
-		isDecreasing := true
-		problemDampening := false
-		damp := false
-		acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
-
-		if !acceptable {
-			t.Errorf("%d should be acceptable", val)
-		}
+	cases := adjacentTest{
+		dampened:  false,
+		dampening: false,
+		direction: "decreasing",
+		expect: adjacentExpect{
+			safe: true,
+		},
+		reports: reports,
+	}
+	pass := getAdjacentLevelsTestLoop(t, cases)
+	if !pass {
+		fmt.Printf("Decreasing, non-dampening, safe:" + styleBAD("bad") + "\n")
 	}
 
-	cases = [][]int{
+	reports = [][]int{
+		{5, 4, 3, 2, 1},
+		{10, 8, 6, 4, 2},
+		{15, 12, 9, 6, 3},
+		{8, 4, 3, 2, 1},
+	}
+	cases = adjacentTest{
+		dampened:  false,
+		dampening: true,
+		direction: "decreasing",
+		expect: adjacentExpect{
+			safe: true,
+		},
+		reports: reports,
+	}
+	pass = getAdjacentLevelsTestLoop(t, cases)
+	if !pass {
+		fmt.Printf("Decreasing, dampening, dry, safe:" + styleBAD("bad") + "\n")
+	}
+
+	reports = [][]int{
 		{1, 2, 3, 4, 5},
 		{2, 4, 6, 8, 10},
 		{3, 6, 9, 12, 15},
+		{1, 2, 3, 4, 8},
 	}
-	for _, val := range cases {
-		isDecreasing := false
-		problemDampening := false
-		damp := false
-		acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
+	cases = adjacentTest{
+		dampened:  false,
+		dampening: true,
+		direction: "increasing",
+		expect: adjacentExpect{
+			safe: true,
+		},
+		reports: reports,
+	}
+	pass = getAdjacentLevelsTestLoop(t, cases)
+	if !pass {
+		fmt.Printf("Decreasing, dampening, dry, safe:" + styleBAD("bad") + "\n")
+	}
+}
 
-		if !acceptable {
-			t.Errorf("%d should be acceptable", val)
+func styleBAD(s string) string {
+	return "\033[37;41m" + s + "\033[0m"
+}
+
+func getDirectionTestLoop(t *testing.T, cases directionTest) bool {
+	pass := true
+
+	for _, val := range cases.reports {
+		direction, dampened, temp, safe := getDirection(val, cases.dampening)
+
+		// When expecting unsafe, skip the rest
+		if !cases.expect.safe && !safe {
+			continue
+		}
+
+		if direction != cases.expect.direction {
+			pass = false
+			t.Errorf("Direction (%s) is wrong", direction)
+		}
+
+		if dampened != cases.expect.dampened {
+			pass = false
+			t.Errorf("Dampened (%t) is wrong", dampened)
+		}
+
+		if slices.Equal(temp, val) != cases.expect.reportToMatch {
+			pass = false
+			t.Errorf("Updated report slice (%d) is wrong", temp)
+		}
+
+		if safe != cases.expect.safe {
+			pass = false
+			t.Errorf("Safe (%t) is wrong", safe)
 		}
 	}
 
-	cases = [][]int{
-		{},
-	}
-	for _, val := range falseDampenedDecreasingCases {
-		isDecreasing := true
-		problemDampening := true
-		damp := false
-		acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
-
-		if acceptable {
-			t.Errorf("%d should not be acceptable", val)
-		}
-	}
-
-	// for _, val := range falseDampenedIncreasingCases {
-	//               isDecreasing := false
-	//               problemDampening := true
-	//               damp := false
-	// acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
-	//
-	// 	if acceptable {
-	// 		t.Errorf("%d should not be acceptable", val)
-	// 	}
-	// }
-
-	cases = [][]int{
-		{5, 4, 3, 2, 1},
-		{10, 8, 6, 4, 2},
-		{15, 12, 9, 6, 3},
-	}
-	for _, val := range cases {
-		isDecreasing := true
-		problemDampening := true
-		damp := false
-		acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
-
-		if !acceptable {
-			t.Errorf("%d should be acceptable", val)
-		}
-	}
-
-	// for _, val := range trueDampenedIncreasingCases {
-	//               isDecreasing := false
-	//               problemDampening := true
-	//               damp := false
-	// acceptable := getReportAdjacentLevelsAcceptable(val, isDecreasing, problemDampening, damp)
-	//
-	// 	if !acceptable {
-	// 		t.Errorf("%d should be acceptable", val)
-	// 	}
-	// }
+	return pass
 }
 
 func TestGetDirection(t *testing.T) {
-	type expectation struct {
-		direction     string
-		dampened      bool
-		reportToMatch bool
-		safe          bool
-	}
-	type testcase struct {
-		dampening bool
-		expect    expectation
-		reports   [][]int
-	}
-
 	reports := [][]int{
 		{5, 4, 3, 2, 1},
 		{10, 8, 6, 4, 2},
@@ -288,7 +183,7 @@ func TestGetDirection(t *testing.T) {
 		{3, 2, 1},
 		{3, 2},
 	}
-	cases := testcase{
+	cases := directionTest{
 		dampening: false,
 		expect: expectation{
 			direction:     "decreasing",
@@ -299,23 +194,118 @@ func TestGetDirection(t *testing.T) {
 		reports: reports,
 	}
 
-	for _, val := range cases.reports {
-		direction, dampened, temp, safe := getDirection(val, cases.dampening)
+	pass := getDirectionTestLoop(t, cases)
+	if !pass {
+		fmt.Printf("Decreasing, non-dampened, safe: " + styleBAD("bad") + "\n")
+	}
 
-		if direction != cases.expect.direction {
-			t.Errorf("Direction (%s) is wrong", direction)
-		}
+	reports = [][]int{
+		{5, 5, 4, 3, 2, 1},
+		{10, 8, 6, 8, 4, 2},
+		{985, 733, 1013, 44, 3},
+		{5, 4, 3, 2, 1, 1, 0},
+	}
+	cases = directionTest{
+		dampening: true,
+		expect: expectation{
+			direction:     "decreasing",
+			dampened:      true,
+			reportToMatch: false,
+			safe:          true,
+		},
+		reports: reports,
+	}
 
-		if dampened != cases.expect.dampened {
-			t.Errorf("Dampened (%t) is wrong", dampened)
-		}
+	pass = getDirectionTestLoop(t, cases)
+	if !pass {
+		fmt.Printf("Decreasing, dampened, safe: " + styleBAD("bad") + "\n")
+	}
 
-		if slices.Equal(temp, val) != cases.expect.reportToMatch {
-			t.Errorf("Updated report slice (%d) is wrong", temp)
-		}
+	reports = [][]int{
+		{5, 5, 4, 3, 3, 2, 1},
+		{10, 8, 6, 8, 4, 4, 2},
+		{985, 733, 1013, 44, 3, 33},
+		{5, 4, 3, 2, 1, 1, 0, 1},
+	}
+	cases = directionTest{
+		dampening: true,
+		expect: expectation{
+			direction:     "decreasing",
+			dampened:      true,
+			reportToMatch: false,
+			safe:          false,
+		},
+		reports: reports,
+	}
 
-		if safe != cases.expect.safe {
-			t.Errorf("Safe (%t) is wrong", safe)
-		}
+	pass = getDirectionTestLoop(t, cases)
+	if !pass {
+		fmt.Printf("Decreasing, dampened, unsafe: " + styleBAD("bad") + "\n")
+	}
+
+	reports = [][]int{
+		{1, 2, 3, 4, 5},
+		{2, 4, 6, 8, 10},
+		{3, 6, 9, 12, 15},
+		{100, 300, 700, 900, 300000},
+	}
+	cases = directionTest{
+		dampening: false,
+		expect: expectation{
+			direction:     "increasing",
+			dampened:      false,
+			reportToMatch: true,
+			safe:          true,
+		},
+		reports: reports,
+	}
+
+	pass = getDirectionTestLoop(t, cases)
+	if !pass {
+		fmt.Printf("Increasing, non-dampened, safe: " + styleBAD("bad") + "\n")
+	}
+
+	reports = [][]int{
+		{1, 2, 1, 4, 5},
+		{2, 4, 6, 6, 10},
+		{3, 6, 9, 32, 15},
+		{100, 300, 200, 900, 300000},
+	}
+	cases = directionTest{
+		dampening: true,
+		expect: expectation{
+			direction:     "increasing",
+			dampened:      true,
+			reportToMatch: false,
+			safe:          true,
+		},
+		reports: reports,
+	}
+
+	pass = getDirectionTestLoop(t, cases)
+	if !pass {
+		fmt.Printf("Increasing, dampened, safe: " + styleBAD("bad") + "\n")
+	}
+
+	reports = [][]int{
+		{1, 2, 1, 0, 5},
+		{2, 4, 6, 6, 10, 3},
+		{3, 6, 9, 32, 15, 2},
+		{100, 100, 300, 200, 900, 300000},
+	}
+	cases = directionTest{
+		dampening: true,
+		expect: expectation{
+			direction:     "increasing",
+			dampened:      true,
+			reportToMatch: false,
+			safe:          false,
+		},
+		reports: reports,
+	}
+
+	pass = getDirectionTestLoop(t, cases)
+	if !pass {
+		fmt.Printf("Increasing, dampened, unsafe: " + styleBAD("bad") + "\n")
 	}
 }

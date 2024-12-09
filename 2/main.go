@@ -11,6 +11,28 @@ import (
 	"github.com/Johnsoct/adventofcode/get"
 )
 
+// func deleteSliceIndex[S ~[]E, E any](s S, i int) S {
+// 	oldLen := len(s)
+// 	tempI := i
+// 	tempS := make(S, len(s))
+//
+// 	copy(tempS, s)
+//
+// 	if i == 0 {
+// 		tempI = 1
+// 	}
+// 	if oldLen == i {
+// 		return s
+// 	}
+//
+// 	// fmt.Println(tempS[:tempI], tempS[tempI+1:])
+//
+// 	tempS = append(tempS[:tempI], tempS[tempI+1:]...)
+// 	clear(tempS[len(tempS):oldLen]) // zero/nil out obsolete elements (GC)
+//
+// 	return tempS
+// }
+
 func deleteSliceIndex[S ~[]E, E any](s S, i int) S {
 	oldLen := len(s)
 	tempI := i
@@ -18,20 +40,13 @@ func deleteSliceIndex[S ~[]E, E any](s S, i int) S {
 
 	copy(tempS, s)
 
-	if i == 0 {
-		tempI = 1
-	}
 	if oldLen == i {
 		return s
 	}
 
-	fmt.Println("old:", tempS)
-	fmt.Println("index:", tempI, oldLen)
-	fmt.Println("end", tempS[:tempI])
-	fmt.Println("start", tempS[tempI+1:])
+	// fmt.Println(tempS[:tempI], tempS[tempI+1:])
+
 	tempS = append(tempS[:tempI], tempS[tempI+1:]...)
-	fmt.Println("new:", tempS)
-	fmt.Println()
 	clear(tempS[len(tempS):oldLen]) // zero/nil out obsolete elements (GC)
 
 	return tempS
@@ -41,11 +56,7 @@ func getDirectionDecreasingComparison(report []int, i int) bool {
 	return report[i] > report[i+1]
 }
 
-func getDirectionIncreasingComparison(report []int, i int) bool {
-	return report[i] < report[i+1]
-}
-
-func getDirection(report []int, dampening bool) (string, bool, []int, bool) {
+func getDirectionState(report []int) (bool, string, int, bool, []int) {
 	dampened := false
 	direction := "increasing" // default
 	i := 0                    // Control index to psuedo recurse
@@ -54,6 +65,14 @@ func getDirection(report []int, dampening bool) (string, bool, []int, bool) {
 
 	copy(temp, report)
 
+	return dampened, direction, i, safe, temp
+}
+
+func getDirectionIncreasingComparison(report []int, i int) bool {
+	return report[i] < report[i+1]
+}
+
+func getDirection(report []int, dampening bool) (string, bool, []int, bool) {
 	// Logic:
 	// In default direction,
 	// 1.   Compare index 0 to index 1
@@ -64,6 +83,9 @@ func getDirection(report []int, dampening bool) (string, bool, []int, bool) {
 	//
 	// If #1 does not return the default direction, repeat with the opposite direction
 
+	dampened, direction, i, safe, temp := getDirectionState(report)
+
+	// TODO: refactor the two loops, which are identical except the getcomparison function
 	for range len(temp) - 1 {
 		if !getDirectionIncreasingComparison(temp, i) {
 			if dampened {
@@ -87,11 +109,7 @@ func getDirection(report []int, dampening bool) (string, bool, []int, bool) {
 	// If report wasn't increasing...
 	if !safe {
 		// reset loop state
-		i = 0
-		safe = true
-		temp = make([]int, len(report))
-
-		copy(temp, report)
+		dampened, direction, i, safe, temp = getDirectionState(report)
 
 		for range len(temp) - 1 {
 			if !getDirectionDecreasingComparison(temp, i) {
@@ -121,61 +139,74 @@ func getDirection(report []int, dampening bool) (string, bool, []int, bool) {
 	return direction, dampened, temp, safe
 }
 
+func analyzeReportSafety(report []int, dampening bool) bool {
+	direction, dampened, r, safe := getDirection(report, dampening)
+	if safe {
+		safe = getReportAdjacentLevelsAcceptable(r, direction, dampening, dampened)
+	}
+
+	return safe
+}
+
 func analyzeReports(reports [][]int) {
 	problemDampenerSafeReportCount := 0
 	safeReportCount := 0
 
 	for _, val := range reports {
-		if getReportSafety(val, false) {
+		if analyzeReportSafety(val, false) {
 			safeReportCount++
 		}
-		if getReportSafety(val, true) {
+		if analyzeReportSafety(val, true) {
 			problemDampenerSafeReportCount++
 		}
 	}
 
 	fmt.Printf("Total safe reports: %d\n", safeReportCount)
-	fmt.Printf("Total problem dampened reports: %d\n", problemDampenerSafeReportCount)
 	fmt.Printf("The correct number of safe reports is 680\n")
+	fmt.Printf("Total problem dampened reports: %d\n", problemDampenerSafeReportCount)
 	fmt.Printf("The correct number of problem dampened reports is 680\n")
 }
 
 func getAdjacentCondition(report []int, i int, isDecreasing bool) bool {
 	current := report[i]
-	min := 1
 	max := 3
+	min := 1
 	next := report[i+1]
 
 	diff := next - current
 	if isDecreasing {
 		diff = current - next
 	}
+
 	// fmt.Println("adjacent condition", i, report, "current", current, "next", next, "condition", diff < min || diff > max)
 
-	return diff < min || diff > max
+	return diff >= min && diff <= max
 }
 
-func getReportAdjacentLevelsAcceptable(report []int, isDecreasing, problemDampener, damp bool) bool {
+func getReportAdjacentLevelsAcceptable(report []int, direction string, dampening, damp bool) bool {
 	acceptable := true
 	dampened := damp
 	i := 0 // Artificially control loop index to psuedo recurse loop iteration
+	isDecreasing := true
 	temp := make([]int, len(report))
+
+	if direction == "increasing" {
+		isDecreasing = false
+	}
 
 	copy(temp, report)
 
-	for i < len(temp)-1 {
-		if getAdjacentCondition(temp, i, isDecreasing) {
-			if problemDampener {
-				a, r, d := ifProblemDampener(temp, i, dampened)
-				// fmt.Println(a, r, d)
+	for range len(temp) - 1 {
+		if !getAdjacentCondition(temp, i, isDecreasing) {
+			if dampening && !dampened {
+				dampened = true
+				indexToRemove := i
 
-				acceptable = a
-				dampened = d
-				temp = r
-
-				if !acceptable {
-					break
+				if !isDecreasing {
+					indexToRemove = i + 1
 				}
+
+				temp = deleteSliceIndex(temp, indexToRemove)
 
 				// Do not increase index; "recursion" with updated temp
 				continue
@@ -189,99 +220,6 @@ func getReportAdjacentLevelsAcceptable(report []int, isDecreasing, problemDampen
 	}
 
 	return acceptable
-}
-
-func getSnowBallCheck(report []int, index int, direction string) bool {
-	current := report[index]
-	next := report[index+1]
-
-	// fmt.Println("dampenedReport", index, report, "current", current, "previous", previous)
-
-	snowballCheck := next > current
-	if direction == "decreasing" {
-		snowballCheck = next < current
-	}
-
-	return snowballCheck
-}
-
-func ifProblemDampener(report []int, i int, damp bool) (bool, []int, bool) {
-	acceptable := true
-	dampened := damp
-	temp := make([]int, len(report))
-
-	copy(temp, report)
-
-	if dampened == true {
-		// If temp has already had one level removed, it is no longer acceptable
-		acceptable = false
-	} else {
-		dampened = true
-		temp = append(temp[:i], temp[i+1:]...) // "Remove" this problem level; continue on
-	}
-
-	return acceptable, temp, dampened
-}
-
-func getReportSnowballing(report []int, direction string, problemDampener bool) (bool, bool, []int) {
-	dampened := false
-	dampenedReport := make([]int, len(report))
-	i := 0 // Control the index for when we remove a level from dampenedReport (psuedo recursion)
-	snowballing := true
-
-	copy(dampenedReport, report)
-
-	for i < len(dampenedReport)-1 {
-		if !getSnowBallCheck(dampenedReport, i, direction) {
-			if problemDampener {
-				a, r, d := ifProblemDampener(dampenedReport, i, dampened)
-
-				dampened = d
-				dampenedReport = r
-				snowballing = a
-
-				if !snowballing {
-					break
-				}
-
-				// Do not increase index; "recursion" with updated dampenedReport
-				continue
-			} else {
-				snowballing = false
-				break
-			}
-		}
-
-		i++
-	}
-
-	return snowballing, dampened, dampenedReport
-}
-
-func getReportSafety(report []int, problemDampener bool) bool {
-	dampened := false
-	isAdjacentLevelsAcceptable := false
-	tempReport := make([]int, len(report))
-
-	copy(tempReport, report)
-
-	isDecreasing, damp, dampenedReport := getReportSnowballing(tempReport, "decreasing", problemDampener)
-	if damp == true {
-		dampened = true
-		tempReport = dampenedReport
-	}
-	isIncreasing, damp, dampenedReport := getReportSnowballing(tempReport, "increasing", problemDampener)
-	if damp == true {
-		dampened = true
-		tempReport = dampenedReport
-	}
-
-	if isDecreasing || isIncreasing {
-		isAdjacentLevelsAcceptable = getReportAdjacentLevelsAcceptable(tempReport, isDecreasing, problemDampener, dampened)
-		fmt.Printf("Dampened? %t\tOriginal: %d\tUpdated: %d\tAcceptable: %t\n", dampened, report, tempReport, isAdjacentLevelsAcceptable)
-	}
-
-	return (isDecreasing || isIncreasing) && isAdjacentLevelsAcceptable
 }
 
 func parseRawInput(file *os.File) [][]int {
