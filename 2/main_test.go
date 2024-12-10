@@ -7,10 +7,9 @@ import (
 )
 
 type expectation struct {
-	direction     string
-	dampened      bool
-	reportToMatch bool
-	safe          bool
+	direction string
+	dampened  bool
+	safe      bool
 }
 type adjacentExpect struct {
 	safe bool
@@ -69,6 +68,10 @@ func getAdjacentLevelsTestLoop(t *testing.T, cases adjacentTest) bool {
 		if safe != cases.expect.safe {
 			pass = false
 			t.Errorf("Safe (%t) is wrong", safe)
+		}
+
+		if !pass {
+			t.Errorf("Incorrect report/case: %d", val)
 		}
 	}
 
@@ -146,11 +149,6 @@ func getDirectionTestLoop(t *testing.T, cases directionTest) bool {
 	for _, val := range cases.reports {
 		direction, dampened, temp, safe := getDirection(val, cases.dampening)
 
-		// When expecting unsafe, skip the rest
-		if !cases.expect.safe && !safe {
-			continue
-		}
-
 		if direction != cases.expect.direction {
 			pass = false
 			t.Errorf("Direction (%s) is wrong", direction)
@@ -161,14 +159,22 @@ func getDirectionTestLoop(t *testing.T, cases directionTest) bool {
 			t.Errorf("Dampened (%t) is wrong", dampened)
 		}
 
-		if slices.Equal(temp, val) != cases.expect.reportToMatch {
-			pass = false
-			t.Errorf("Updated report slice (%d) is wrong", temp)
+		// fmt.Println(slices.Equal(temp, val), cases.expect.reportToMatch)
+		if (safe && !dampened) || !safe {
+			reportsShouldMatch := true
+			if slices.Equal(temp, val) != reportsShouldMatch {
+				pass = false
+				t.Errorf("Updated report slice (%d) is wrong", temp)
+			}
 		}
 
 		if safe != cases.expect.safe {
 			pass = false
 			t.Errorf("Safe (%t) is wrong", safe)
+		}
+
+		if !pass {
+			t.Errorf("Incorrect report/case: %d, temp: %d", val, temp)
 		}
 	}
 
@@ -182,14 +188,14 @@ func TestGetDirection(t *testing.T) {
 		{15, 12, 9, 6, 3},
 		{3, 2, 1},
 		{3, 2},
+		{7123, 66, 33, 11, 1},
 	}
 	cases := directionTest{
 		dampening: false,
 		expect: expectation{
-			direction:     "decreasing",
-			dampened:      false,
-			reportToMatch: true,
-			safe:          true,
+			direction: "decreasing",
+			dampened:  false,
+			safe:      true,
 		},
 		reports: reports,
 	}
@@ -208,10 +214,9 @@ func TestGetDirection(t *testing.T) {
 	cases = directionTest{
 		dampening: true,
 		expect: expectation{
-			direction:     "decreasing",
-			dampened:      true,
-			reportToMatch: false,
-			safe:          true,
+			direction: "decreasing",
+			dampened:  true,
+			safe:      true,
 		},
 		reports: reports,
 	}
@@ -230,10 +235,9 @@ func TestGetDirection(t *testing.T) {
 	cases = directionTest{
 		dampening: true,
 		expect: expectation{
-			direction:     "decreasing",
-			dampened:      true,
-			reportToMatch: false,
-			safe:          false,
+			direction: "",
+			dampened:  true,
+			safe:      false,
 		},
 		reports: reports,
 	}
@@ -252,10 +256,9 @@ func TestGetDirection(t *testing.T) {
 	cases = directionTest{
 		dampening: false,
 		expect: expectation{
-			direction:     "increasing",
-			dampened:      false,
-			reportToMatch: true,
-			safe:          true,
+			direction: "increasing",
+			dampened:  false,
+			safe:      true,
 		},
 		reports: reports,
 	}
@@ -270,14 +273,16 @@ func TestGetDirection(t *testing.T) {
 		{2, 4, 6, 6, 10},
 		{3, 6, 9, 32, 15},
 		{100, 300, 200, 900, 300000},
+		{1, 2, 2, 3, 4, 5},
+		{14, 18, 21, 24, 21},
+		{46, 44, 46, 49, 51, 53, 60, 64},
 	}
 	cases = directionTest{
 		dampening: true,
 		expect: expectation{
-			direction:     "increasing",
-			dampened:      true,
-			reportToMatch: false,
-			safe:          true,
+			direction: "increasing",
+			dampened:  true,
+			safe:      true,
 		},
 		reports: reports,
 	}
@@ -292,14 +297,14 @@ func TestGetDirection(t *testing.T) {
 		{2, 4, 6, 6, 10, 3},
 		{3, 6, 9, 32, 15, 2},
 		{100, 100, 300, 200, 900, 300000},
+		{14, 18, 21, 24, 21, 21},
 	}
 	cases = directionTest{
 		dampening: true,
 		expect: expectation{
-			direction:     "increasing",
-			dampened:      true,
-			reportToMatch: false,
-			safe:          false,
+			direction: "",
+			dampened:  true,
+			safe:      false,
 		},
 		reports: reports,
 	}

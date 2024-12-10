@@ -11,28 +11,6 @@ import (
 	"github.com/Johnsoct/adventofcode/get"
 )
 
-// func deleteSliceIndex[S ~[]E, E any](s S, i int) S {
-// 	oldLen := len(s)
-// 	tempI := i
-// 	tempS := make(S, len(s))
-//
-// 	copy(tempS, s)
-//
-// 	if i == 0 {
-// 		tempI = 1
-// 	}
-// 	if oldLen == i {
-// 		return s
-// 	}
-//
-// 	// fmt.Println(tempS[:tempI], tempS[tempI+1:])
-//
-// 	tempS = append(tempS[:tempI], tempS[tempI+1:]...)
-// 	clear(tempS[len(tempS):oldLen]) // zero/nil out obsolete elements (GC)
-//
-// 	return tempS
-// }
-
 func deleteSliceIndex[S ~[]E, E any](s S, i int) S {
 	oldLen := len(s)
 	tempI := i
@@ -87,7 +65,9 @@ func getDirection(report []int, dampening bool) (string, bool, []int, bool) {
 
 	// TODO: refactor the two loops, which are identical except the getcomparison function
 	for range len(temp) - 1 {
+		fmt.Println(temp, temp[i])
 		if !getDirectionIncreasingComparison(temp, i) {
+			fmt.Println("uh oh")
 			if dampened {
 				safe = false
 				break
@@ -95,7 +75,7 @@ func getDirection(report []int, dampening bool) (string, bool, []int, bool) {
 
 			if dampening {
 				dampened = true
-				temp = deleteSliceIndex(temp, i)
+				temp = deleteSliceIndex(temp, i+1)
 				continue
 			} else {
 				safe = false
@@ -136,6 +116,11 @@ func getDirection(report []int, dampening bool) (string, bool, []int, bool) {
 		}
 	}
 
+	if !safe {
+		direction = ""
+		temp = report
+	}
+
 	return direction, dampened, temp, safe
 }
 
@@ -143,6 +128,9 @@ func analyzeReportSafety(report []int, dampening bool) bool {
 	direction, dampened, r, safe := getDirection(report, dampening)
 	if safe {
 		safe = getReportAdjacentLevelsAcceptable(r, direction, dampening, dampened)
+	} else {
+		// TODO: remove
+		fmt.Println(r, dampening, dampened, report)
 	}
 
 	return safe
@@ -151,16 +139,20 @@ func analyzeReportSafety(report []int, dampening bool) bool {
 func analyzeReports(reports [][]int) {
 	problemDampenerSafeReportCount := 0
 	safeReportCount := 0
+	unsafe := 0
 
 	for _, val := range reports {
-		if analyzeReportSafety(val, false) {
-			safeReportCount++
-		}
+		// if analyzeReportSafety(val, false) {
+		// 	safeReportCount++
+		// }
 		if analyzeReportSafety(val, true) {
 			problemDampenerSafeReportCount++
+		} else {
+			unsafe++
 		}
 	}
 
+	fmt.Println("unsafe reports", unsafe)
 	fmt.Printf("Total safe reports: %d\n", safeReportCount)
 	fmt.Printf("The correct number of safe reports is 680\n")
 	fmt.Printf("Total problem dampened reports: %d\n", problemDampenerSafeReportCount)
