@@ -1,0 +1,37 @@
+When dampening, there is a potential for two possible safe versions of a single report:
+
+Report: [5 10 3 2 1]
+
+If you remove index 0, [5 3 2 1] is safe (all decreasing, acceptable adjacent levels)
+If you remove index 1, [10 3 2 1] is a safe (all decreasing); however, it is eventually unsafe (10 - 3 > max safe adjacent levels)
+
+However, it would be inefficient to check for adjacent level safety on every report until you know whether it is directionally safe; therefore,
+it is necessary to iterate over all the reports and create a new slice of all possible safe versions of each report, which theoretically,
+could be longer than the original reports slice.
+
+Once a slice of all possible directionally safe versions exists, the slices can be checked for adjacent level safety.
+
+
+
+5 6 4 3 2
+        dampened
+        lookahead
+        reports
+        safe
+        temp
+
+        1. iterate fn()
+                a. If index 0 > index 1
+                        0. If dampened
+                                safe = false
+                                break
+                        1. If dampening
+                                temp = remove index 0
+                                dampened = true
+                                recurse
+                        2. else
+                                safe = false
+                                break
+
+        if safe
+                reports = append(reports, temp)

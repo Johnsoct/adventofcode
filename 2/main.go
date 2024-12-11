@@ -11,6 +11,9 @@ import (
 	"github.com/Johnsoct/adventofcode/get"
 )
 
+type report []int
+type reports [][]int
+
 func deleteSliceIndex[S ~[]E, E any](s S, i int) S {
 	oldLen := len(s)
 	tempI := i
@@ -65,9 +68,7 @@ func getDirection(report []int, dampening bool) (string, bool, []int, bool) {
 
 	// TODO: refactor the two loops, which are identical except the getcomparison function
 	for range len(temp) - 1 {
-		fmt.Println(temp, temp[i])
 		if !getDirectionIncreasingComparison(temp, i) {
-			fmt.Println("uh oh")
 			if dampened {
 				safe = false
 				break
@@ -75,7 +76,7 @@ func getDirection(report []int, dampening bool) (string, bool, []int, bool) {
 
 			if dampening {
 				dampened = true
-				temp = deleteSliceIndex(temp, i+1)
+				temp = deleteSliceIndex(temp, i)
 				continue
 			} else {
 				safe = false
@@ -122,6 +123,92 @@ func getDirection(report []int, dampening bool) (string, bool, []int, bool) {
 	}
 
 	return direction, dampened, temp, safe
+}
+
+func getDirectionComparison(direction string, report report, i int) bool {
+	var condition bool
+
+	if direction == "decreasing" {
+		condition = getDirectionDecreasingComparison(report, i)
+	} else {
+		condition = getDirectionIncreasingComparison(report, i)
+	}
+
+	return condition
+}
+
+func getIndexToDelete(i int, lookahead bool) int {
+	if lookahead {
+		return i + 1
+	}
+
+	return i
+}
+
+func getDirectionallySafeReport(report report, dampening bool, direction string, lookahead bool) (bool, report) {
+	dampened, _, i, safe, r := getDirectionState(report)
+
+	for i < len(r)-1 {
+		condition := getDirectionComparison(direction, r, i)
+
+		if !condition {
+			if dampened {
+				safe = false
+				break
+			}
+
+			if dampening {
+				dampened = true
+				r = deleteSliceIndex(r, getIndexToDelete(i, lookahead))
+
+				if i == len(r)-1 && !lookahead {
+					i--
+				}
+
+				continue
+			}
+
+			safe = false
+			break
+		}
+
+		i++
+	}
+
+	return safe, r
+}
+
+func getDirectionallySafeReports(report report, dampening bool) reports {
+	reports := make(reports, 0)
+
+	// Increasing looking behind
+	safe, r := getDirectionallySafeReport(report, dampening, "increasing", false)
+	if safe {
+		reports = append(reports, r)
+	}
+
+	// Decreasing looking behind
+	safe, r = getDirectionallySafeReport(report, dampening, "decreasing", false)
+	if safe {
+		reports = append(reports, r)
+	}
+
+	// If not dampening, checking lookahead and lookbehind results in duplicates
+	if dampening {
+		// Increasing looking ahead
+		safe, r = getDirectionallySafeReport(report, dampening, "increasing", true)
+		if safe {
+			reports = append(reports, r)
+		}
+
+		// Decreasing looking ahead
+		safe, r = getDirectionallySafeReport(report, dampening, "decreasing", true)
+		if safe {
+			reports = append(reports, r)
+		}
+	}
+
+	return reports
 }
 
 func analyzeReportSafety(report []int, dampening bool) bool {
