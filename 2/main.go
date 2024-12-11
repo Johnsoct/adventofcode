@@ -33,8 +33,24 @@ func deleteSliceIndex[S ~[]E, E any](s S, i int) S {
 	return tempS
 }
 
+func getDirectionComparison(direction string, report report, i int) bool {
+	var condition bool
+
+	if direction == "decreasing" {
+		condition = getDirectionDecreasingComparison(report, i)
+	} else {
+		condition = getDirectionIncreasingComparison(report, i)
+	}
+
+	return condition
+}
+
 func getDirectionDecreasingComparison(report []int, i int) bool {
 	return report[i] > report[i+1]
+}
+
+func getDirectionIncreasingComparison(report []int, i int) bool {
+	return report[i] < report[i+1]
 }
 
 func getDirectionState(report []int) (bool, string, int, bool, []int) {
@@ -49,94 +65,6 @@ func getDirectionState(report []int) (bool, string, int, bool, []int) {
 	return dampened, direction, i, safe, temp
 }
 
-func getDirectionIncreasingComparison(report []int, i int) bool {
-	return report[i] < report[i+1]
-}
-
-func getDirection(report []int, dampening bool) (string, bool, []int, bool) {
-	// Logic:
-	// In default direction,
-	// 1.   Compare index 0 to index 1
-	// 1a.  IF true, compare index 1 to index 2
-	// 1aa. IF true, is default direction
-	// 1ab. IF false, remove index 2, and if dampened != true, try 1a again
-	// 1b.  Remove index 1, and if dampened != true, try 1 again
-	//
-	// If #1 does not return the default direction, repeat with the opposite direction
-
-	dampened, direction, i, safe, temp := getDirectionState(report)
-
-	// TODO: refactor the two loops, which are identical except the getcomparison function
-	for range len(temp) - 1 {
-		if !getDirectionIncreasingComparison(temp, i) {
-			if dampened {
-				safe = false
-				break
-			}
-
-			if dampening {
-				dampened = true
-				temp = deleteSliceIndex(temp, i)
-				continue
-			} else {
-				safe = false
-				break
-			}
-		}
-
-		i++
-	}
-
-	// If report wasn't increasing...
-	if !safe {
-		// reset loop state
-		dampened, direction, i, safe, temp = getDirectionState(report)
-
-		for range len(temp) - 1 {
-			if !getDirectionDecreasingComparison(temp, i) {
-				if dampened {
-					safe = false
-					break
-				}
-
-				if dampening {
-					dampened = true
-					temp = deleteSliceIndex(temp, i)
-					continue
-				} else {
-					safe = false
-					break
-				}
-			}
-
-			i++
-		}
-
-		if safe {
-			direction = "decreasing"
-		}
-	}
-
-	if !safe {
-		direction = ""
-		temp = report
-	}
-
-	return direction, dampened, temp, safe
-}
-
-func getDirectionComparison(direction string, report report, i int) bool {
-	var condition bool
-
-	if direction == "decreasing" {
-		condition = getDirectionDecreasingComparison(report, i)
-	} else {
-		condition = getDirectionIncreasingComparison(report, i)
-	}
-
-	return condition
-}
-
 func getIndexToDelete(i int, lookahead bool) int {
 	if lookahead {
 		return i + 1
@@ -145,7 +73,7 @@ func getIndexToDelete(i int, lookahead bool) int {
 	return i
 }
 
-func getDirectionallySafeReport(report report, dampening bool, direction string, lookahead bool) (bool, report) {
+func getDirectionallySafeReport(report report, dampening bool, direction string, lookahead bool) (bool, report, string, bool) {
 	dampened, _, i, safe, r := getDirectionState(report)
 
 	for i < len(r)-1 {
@@ -161,7 +89,10 @@ func getDirectionallySafeReport(report report, dampening bool, direction string,
 				dampened = true
 				r = deleteSliceIndex(r, getIndexToDelete(i, lookahead))
 
-				if i == len(r)-1 && !lookahead {
+				// By removing a value at index n, we are changing the values
+				// checked in the condition above, so we want to reduce the index
+				// by 1 to recheck the condition with the new value at index n
+				if i != 0 {
 					i--
 				}
 
@@ -175,71 +106,65 @@ func getDirectionallySafeReport(report report, dampening bool, direction string,
 		i++
 	}
 
-	return safe, r
+	return safe, r, direction, dampened
 }
 
-func getDirectionallySafeReports(report report, dampening bool) reports {
-	reports := make(reports, 0)
+func getSafeReports(report report, dampening bool) (reports, reports) {
+	dampeningReports := make(reports, 0)
+	nondampeningReports := make(reports, 0)
 
 	// Increasing looking behind
-	safe, r := getDirectionallySafeReport(report, dampening, "increasing", false)
+	safe, r, direction, dampened := getDirectionallySafeReport(report, dampening, "increasing", false)
 	if safe {
-		reports = append(reports, r)
+		acceptable := getReportAdjacentLevelsAcceptable(r, direction, false, dampened)
+		if acceptable {
+			nondampeningReports = append(nondampeningReports, r)
+		}
 	}
 
 	// Decreasing looking behind
-	safe, r = getDirectionallySafeReport(report, dampening, "decreasing", false)
+	safe, r, direction, dampened = getDirectionallySafeReport(report, dampening, "decreasing", false)
 	if safe {
-		reports = append(reports, r)
+		acceptable := getReportAdjacentLevelsAcceptable(r, direction, false, dampened)
+		if acceptable {
+			nondampeningReports = append(nondampeningReports, r)
+		}
 	}
 
 	// If not dampening, checking lookahead and lookbehind results in duplicates
 	if dampening {
 		// Increasing looking ahead
-		safe, r = getDirectionallySafeReport(report, dampening, "increasing", true)
+		safe, r, direction, dampened = getDirectionallySafeReport(report, dampening, "increasing", true)
 		if safe {
-			reports = append(reports, r)
+			acceptable := getReportAdjacentLevelsAcceptable(r, direction, true, dampened)
+			if acceptable {
+				dampeningReports = append(dampeningReports, r)
+			}
 		}
 
 		// Decreasing looking ahead
-		safe, r = getDirectionallySafeReport(report, dampening, "decreasing", true)
+		safe, r, direction, dampened = getDirectionallySafeReport(report, dampening, "decreasing", true)
 		if safe {
-			reports = append(reports, r)
+			acceptable := getReportAdjacentLevelsAcceptable(r, direction, true, dampened)
+			if acceptable {
+				dampeningReports = append(dampeningReports, r)
+			}
 		}
 	}
 
-	return reports
+	return nondampeningReports, dampeningReports
 }
 
-func analyzeReportSafety(report []int, dampening bool) bool {
-	direction, dampened, r, safe := getDirection(report, dampening)
-	if safe {
-		safe = getReportAdjacentLevelsAcceptable(r, direction, dampening, dampened)
-	} else {
-		// TODO: remove
-		fmt.Println(r, dampening, dampened, report)
-	}
-
-	return safe
-}
-
-func analyzeReports(reports [][]int) {
+func analyzeReports(reports reports) {
 	problemDampenerSafeReportCount := 0
 	safeReportCount := 0
-	unsafe := 0
 
 	for _, val := range reports {
-		// if analyzeReportSafety(val, false) {
-		// 	safeReportCount++
-		// }
-		if analyzeReportSafety(val, true) {
-			problemDampenerSafeReportCount++
-		} else {
-			unsafe++
-		}
+		nondampeningReports, dampeningReports := getSafeReports(val, true)
+		problemDampenerSafeReportCount += len(dampeningReports)
+		safeReportCount += len(nondampeningReports)
 	}
 
-	fmt.Println("unsafe reports", unsafe)
 	fmt.Printf("Total safe reports: %d\n", safeReportCount)
 	fmt.Printf("The correct number of safe reports is 680\n")
 	fmt.Printf("Total problem dampened reports: %d\n", problemDampenerSafeReportCount)
@@ -262,7 +187,8 @@ func getAdjacentCondition(report []int, i int, isDecreasing bool) bool {
 	return diff >= min && diff <= max
 }
 
-func getReportAdjacentLevelsAcceptable(report []int, direction string, dampening, damp bool) bool {
+func getReportAdjacentLevelsAcceptable(report report, direction string, dampening, damp bool) bool {
+	// NOTE: All reports passed as report are assumed directionally safe
 	acceptable := true
 	dampened := damp
 	i := 0 // Artificially control loop index to psuedo recurse loop iteration
