@@ -16,6 +16,10 @@ type adjacentTest struct {
 	expect    adjacentExpect
 	reports   [][]int
 }
+type test struct {
+	input  report
+	output reports
+}
 
 func styleBAD(s string) string {
 	return "\033[37;41m" + s + "\033[0m"
@@ -133,21 +137,44 @@ func TestAdjacentLevels(t *testing.T) {
 	}
 }
 
-func TestGetDirectionallySafeReports(t *testing.T) {
-	type test struct {
-		input  report
-		output reports
-	}
+func TestGetDirectionallySafeReport(t *testing.T) {
 	rawNonDampeningSafeIncreasingReports := []test{
 		{input: report{1, 2, 3, 4, 5}, output: reports{{1, 2, 3, 4, 5}}},
 		{input: report{2, 4, 6, 8, 10}, output: reports{{2, 4, 6, 8, 10}}},
 		{input: report{3, 6, 9, 12, 15}, output: reports{{3, 6, 9, 12, 15}}},
 		{input: report{100, 200, 300, 400, 500}, output: reports{{100, 200, 300, 400, 500}}},
 	}
+	for i, test := range rawNonDampeningSafeIncreasingReports {
+		safe, report, _, dampened := getDirectionallySafeReport(test.input, false, "increasing")
+
+		if !safe {
+			t.Errorf("Input (%d) should be safe", test.input)
+		}
+
+		if dampened == true {
+			t.Errorf("Dampened should not be true")
+		}
+
+		fmt.Println(i, report, test.output)
+		if !slices.Equal(report, test.output[i]) {
+			t.Errorf("Input's (%d) output does not match (%d); resulted in (%d)", test.input, test.output[i], report)
+		}
+	}
+}
+
+func TestGetSafeReports(t *testing.T) {
+	rawNonDampeningSafeIncreasingReports := []test{
+		{input: report{1, 2, 3, 4, 5}, output: reports{{1, 2, 3, 4, 5}}},
+		{input: report{2, 4, 6, 8, 10}, output: reports{{2, 4, 6, 8, 10}}},
+		{input: report{3, 6, 9, 12, 15}, output: reports{{3, 6, 9, 12, 15}}},
+		// TODO: either update the output to be [] or swap getSafeReports call with
+		// getDirectionallySafeReports becuase getSafeReports checks for adjacent acceptability
+		{input: report{100, 200, 300, 400, 500}, output: reports{{100, 200, 300, 400, 500}}},
+	}
 	for _, val := range rawNonDampeningSafeIncreasingReports {
 		nondampeningReports, dampeningReports := getSafeReports(val.input, false)
 
-		// fmt.Printf("Reports based on test input (%d): %d\n", val.input, reports)
+		fmt.Printf("Reports based on test input (%d): %d\n", val.input, nondampeningReports)
 
 		if len(nondampeningReports) == 0 {
 			t.Errorf("getSafeReports output 0 nondampening reports")

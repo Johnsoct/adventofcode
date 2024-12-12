@@ -35,3 +35,14 @@ Once a slice of all possible directionally safe versions exists, the slices can 
 
         if safe
                 reports = append(reports, temp)
+
+
+
+for safe keeping
+
+				// If removing via lookbehind, the current 2nd to last index
+				// becomes the last index and the for loop will cease to
+				// run again, which won't check the condition a last time
+				if i == len(r)-1 && !lookahead {
+					// i--
+				}

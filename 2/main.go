@@ -73,8 +73,13 @@ func getIndexToDelete(i int, lookahead bool) int {
 	return i
 }
 
-func getDirectionallySafeReport(report report, dampening bool, direction string, lookahead bool) (bool, report, string, bool) {
+func getDirectionallySafeReport(report report, dampening bool, direction string) (bool, report, string, bool) {
 	dampened, _, i, safe, r := getDirectionState(report)
+	lookahead := false
+
+	if dampening {
+		lookahead = true
+	}
 
 	for i < len(r)-1 {
 		condition := getDirectionComparison(direction, r, i)
@@ -114,7 +119,7 @@ func getSafeReports(report report, dampening bool) (reports, reports) {
 	nondampeningReports := make(reports, 0)
 
 	// Increasing looking behind
-	safe, r, direction, dampened := getDirectionallySafeReport(report, dampening, "increasing", false)
+	safe, r, direction, dampened := getDirectionallySafeReport(report, dampening, "increasing")
 	if safe {
 		acceptable := getReportAdjacentLevelsAcceptable(r, direction, false, dampened)
 		if acceptable {
@@ -123,7 +128,7 @@ func getSafeReports(report report, dampening bool) (reports, reports) {
 	}
 
 	// Decreasing looking behind
-	safe, r, direction, dampened = getDirectionallySafeReport(report, dampening, "decreasing", false)
+	safe, r, direction, dampened = getDirectionallySafeReport(report, dampening, "decreasing")
 	if safe {
 		acceptable := getReportAdjacentLevelsAcceptable(r, direction, false, dampened)
 		if acceptable {
@@ -134,7 +139,7 @@ func getSafeReports(report report, dampening bool) (reports, reports) {
 	// If not dampening, checking lookahead and lookbehind results in duplicates
 	if dampening {
 		// Increasing looking ahead
-		safe, r, direction, dampened = getDirectionallySafeReport(report, dampening, "increasing", true)
+		safe, r, direction, dampened = getDirectionallySafeReport(report, dampening, "increasing")
 		if safe {
 			acceptable := getReportAdjacentLevelsAcceptable(r, direction, true, dampened)
 			if acceptable {
@@ -143,7 +148,7 @@ func getSafeReports(report report, dampening bool) (reports, reports) {
 		}
 
 		// Decreasing looking ahead
-		safe, r, direction, dampened = getDirectionallySafeReport(report, dampening, "decreasing", true)
+		safe, r, direction, dampened = getDirectionallySafeReport(report, dampening, "decreasing")
 		if safe {
 			acceptable := getReportAdjacentLevelsAcceptable(r, direction, true, dampened)
 			if acceptable {
