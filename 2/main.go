@@ -5,12 +5,18 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/Johnsoct/adventofcode/get"
 )
 
+type directionallySafeReport struct {
+	dampened bool
+	report   report
+}
+type directionallySafeReports []directionallySafeReport
 type report []int
 type reports [][]int
 
@@ -53,16 +59,15 @@ func getDirectionIncreasingComparison(report []int, i int) bool {
 	return report[i] < report[i+1]
 }
 
-func getDirectionState(report []int) (bool, string, int, bool, []int) {
+func getDirectionState(input report) (bool, int, bool, []int) {
 	dampened := false
-	direction := "increasing" // default
-	i := 0                    // Control index to psuedo recurse
+	i := 0 // Control index to psuedo recurse
+	report := make(report, len(input))
 	safe := true
-	temp := make([]int, len(report))
 
-	copy(temp, report)
+	copy(report, input)
 
-	return dampened, direction, i, safe, temp
+	return dampened, i, safe, report
 }
 
 func getIndexToDelete(i int, lookahead bool) int {
@@ -73,107 +78,147 @@ func getIndexToDelete(i int, lookahead bool) int {
 	return i
 }
 
-func getDirectionallySafeReport(report report, dampening bool, direction string) (bool, report, string, bool) {
-	dampened, _, i, safe, r := getDirectionState(report)
-	lookahead := false
+func getDirectionallySafeReport(input report, dampening bool) directionallySafeReports {
+	deleteDirections := []string{"lookbehind", "lookahead"}
+	directions := []string{"increasing", "decreasing"}
+	safeReports := make(directionallySafeReports, 0)
 
-	if dampening {
-		lookahead = true
-	}
+	for _, direction := range directions {
+		// fmt.Println("direction", direction)
 
-	for i < len(r)-1 {
-		condition := getDirectionComparison(direction, r, i)
+		for _, deleteDirection := range deleteDirections {
+			dampened, i, safe, report := getDirectionState(input)
+			lookahead := false
 
-		if !condition {
-			if dampened {
-				safe = false
-				break
+			if deleteDirection == "lookahead" {
+				lookahead = true
 			}
 
-			if dampening {
-				dampened = true
-				r = deleteSliceIndex(r, getIndexToDelete(i, lookahead))
+			// fmt.Println("Delete direction", deleteDirection)
 
-				// By removing a value at index n, we are changing the values
-				// checked in the condition above, so we want to reduce the index
-				// by 1 to recheck the condition with the new value at index n
-				if i != 0 {
-					i--
+			for i < len(report)-1 {
+				condition := getDirectionComparison(direction, report, i)
+
+				// fmt.Println("Condition", condition)
+
+				if !condition {
+					if dampened {
+						// fmt.Println("Dampened")
+						safe = false
+						break
+					}
+
+					if dampening {
+						// fmt.Println("Dampening")
+						dampened = true
+
+						report = deleteSliceIndex(report, getIndexToDelete(i, lookahead))
+
+						// By removing a value at index n, we are changing the values
+						// checked in the condition above, so we want to reduce the index
+						// by 1 to recheck the condition with the new value at index n
+						if i != 0 {
+							i--
+						}
+
+						continue
+					}
+
+					// fmt.Println("Not dampening or dampened")
+
+					safe = false
+					break
 				}
 
-				continue
+				// fmt.Println("Increasing index")
+
+				i++
 			}
 
-			safe = false
-			break
-		}
+			if safe {
+				// fmt.Println("Safe", report, dampened)
 
-		i++
+				// If identical report is already in safeReports, don't add it again
+				// (consequence of looping through delete directions and have duplicate #'s at the last two indices)
+				if len(safeReports) > 0 && slices.Equal(safeReports[0].report, report) {
+					continue
+				}
+
+				safeReport := directionallySafeReport{
+					dampened: dampened,
+					report:   report,
+				}
+				safeReports = append(safeReports, safeReport)
+			} else {
+				fmt.Println("UNSAFE", report, dampening, dampened, "original", input)
+			}
+		}
 	}
 
-	return safe, r, direction, dampened
+	return safeReports
 }
 
-func getSafeReports(report report, dampening bool) (reports, reports) {
-	dampeningReports := make(reports, 0)
-	nondampeningReports := make(reports, 0)
+func getSafeReports(report report, dampening bool) reports {
+	safeReports := make(reports, 0)
 
-	// Increasing looking behind
-	safe, r, direction, dampened := getDirectionallySafeReport(report, dampening, "increasing")
-	if safe {
-		acceptable := getReportAdjacentLevelsAcceptable(r, direction, false, dampened)
-		if acceptable {
-			nondampeningReports = append(nondampeningReports, r)
-		}
-	}
+	if !dampening {
+		// Increasing looking behind
+		reports := getDirectionallySafeReport(report, dampening)
 
-	// Decreasing looking behind
-	safe, r, direction, dampened = getDirectionallySafeReport(report, dampening, "decreasing")
-	if safe {
-		acceptable := getReportAdjacentLevelsAcceptable(r, direction, false, dampened)
-		if acceptable {
-			nondampeningReports = append(nondampeningReports, r)
+		for _, r := range reports {
+			acceptable := getReportAdjacentLevelsAcceptable(r, false)
+			if acceptable {
+				safeReports = append(safeReports, r.report)
+			}
 		}
 	}
 
 	// If not dampening, checking lookahead and lookbehind results in duplicates
 	if dampening {
-		// Increasing looking ahead
-		safe, r, direction, dampened = getDirectionallySafeReport(report, dampening, "increasing")
-		if safe {
-			acceptable := getReportAdjacentLevelsAcceptable(r, direction, true, dampened)
-			if acceptable {
-				dampeningReports = append(dampeningReports, r)
-			}
-		}
-
 		// Decreasing looking ahead
-		safe, r, direction, dampened = getDirectionallySafeReport(report, dampening, "decreasing")
-		if safe {
-			acceptable := getReportAdjacentLevelsAcceptable(r, direction, true, dampened)
+		reports := getDirectionallySafeReport(report, dampening)
+
+		for _, r := range reports {
+			acceptable := getReportAdjacentLevelsAcceptable(r, true)
 			if acceptable {
-				dampeningReports = append(dampeningReports, r)
+				safeReports = append(safeReports, r.report)
 			}
 		}
 	}
 
-	return nondampeningReports, dampeningReports
+	return safeReports
 }
 
-func analyzeReports(reports reports) {
-	problemDampenerSafeReportCount := 0
-	safeReportCount := 0
+func analyzeReports(input reports) {
+	safeReports := make(reports, 0)
+	unsafeReports := make(reports, 0)
 
-	for _, val := range reports {
-		nondampeningReports, dampeningReports := getSafeReports(val, true)
-		problemDampenerSafeReportCount += len(dampeningReports)
-		safeReportCount += len(nondampeningReports)
+	for _, val := range input {
+		reports := getSafeReports(val, false)
+
+		if len(reports) == 0 {
+			unsafeReports = append(unsafeReports, val)
+		} else {
+			for _, r := range reports {
+				safeReports = append(safeReports, r)
+			}
+		}
 	}
 
-	fmt.Printf("Total safe reports: %d\n", safeReportCount)
-	fmt.Printf("The correct number of safe reports is 680\n")
-	fmt.Printf("Total problem dampened reports: %d\n", problemDampenerSafeReportCount)
-	fmt.Printf("The correct number of problem dampened reports is 680\n")
+	fmt.Printf("\nTotal unsafe reports: %d\n\n", len(unsafeReports))
+	fmt.Printf("Total safe reports: %d\n", len(safeReports))
+	fmt.Printf("The correct number of safe reports is 680\n\n")
+
+	for _, val := range unsafeReports {
+		reports := getSafeReports(val, true)
+
+		for _, r := range reports {
+			safeReports = append(safeReports, r)
+		}
+	}
+
+	fmt.Printf("Total problem dampened reports: %d\n", len(safeReports))
+	fmt.Printf("The correct number of problem dampened reports is 680\n\n")
 }
 
 func getAdjacentCondition(report []int, i int, isDecreasing bool) bool {
@@ -192,39 +237,34 @@ func getAdjacentCondition(report []int, i int, isDecreasing bool) bool {
 	return diff >= min && diff <= max
 }
 
-func getReportAdjacentLevelsAcceptable(report report, direction string, dampening, damp bool) bool {
+func getReportAdjacentLevelsAcceptable(report directionallySafeReport, dampening bool) bool {
 	// NOTE: All reports passed as report are assumed directionally safe
 	acceptable := true
-	dampened := damp
+	// dampened := report.dampened
 	i := 0 // Artificially control loop index to psuedo recurse loop iteration
-	isDecreasing := true
-	temp := make([]int, len(report))
+	temp := make([]int, len(report.report))
 
-	if direction == "increasing" {
-		isDecreasing = false
-	}
-
-	copy(temp, report)
+	copy(temp, report.report)
 
 	for range len(temp) - 1 {
-		if !getAdjacentCondition(temp, i, isDecreasing) {
-			if dampening && !dampened {
-				dampened = true
-				indexToRemove := i
-
-				if !isDecreasing {
-					indexToRemove = i + 1
-				}
-
-				temp = deleteSliceIndex(temp, indexToRemove)
-
-				// Do not increase index; "recursion" with updated temp
-				continue
-			} else {
-				acceptable = false
-				break
-			}
-		}
+		// if !getAdjacentCondition(temp, i, isDecreasing) {
+		// 	if dampening && !dampened {
+		// 		dampened = true
+		// 		indexToRemove := i
+		//
+		// 		// if !isDecreasing {
+		// 		// 	indexToRemove = i + 1
+		// 		// }
+		//
+		// 		temp = deleteSliceIndex(temp, indexToRemove)
+		//
+		// 		// Do not increase index; "recursion" with updated temp
+		// 		continue
+		// 	} else {
+		// 		acceptable = false
+		// 		break
+		// 	}
+		// }
 
 		i++
 	}
