@@ -150,7 +150,7 @@ func getDirectionallySafeReport(input report, dampening bool) directionallySafeR
 				}
 				safeReports = append(safeReports, safeReport)
 			} else {
-				fmt.Println("UNSAFE", report, dampening, dampened, "original", input)
+				// fmt.Println("UNSAFE", report, dampening, dampened, "original", input)
 			}
 		}
 	}
@@ -161,28 +161,12 @@ func getDirectionallySafeReport(input report, dampening bool) directionallySafeR
 func getSafeReports(report report, dampening bool) reports {
 	safeReports := make(reports, 0)
 
-	if !dampening {
-		// Increasing looking behind
-		reports := getDirectionallySafeReport(report, dampening)
+	reports := getDirectionallySafeReport(report, dampening)
 
-		for _, r := range reports {
-			acceptable := getReportAdjacentLevelsAcceptable(r, false)
-			if acceptable {
-				safeReports = append(safeReports, r.report)
-			}
-		}
-	}
-
-	// If not dampening, checking lookahead and lookbehind results in duplicates
-	if dampening {
-		// Decreasing looking ahead
-		reports := getDirectionallySafeReport(report, dampening)
-
-		for _, r := range reports {
-			acceptable := getReportAdjacentLevelsAcceptable(r, true)
-			if acceptable {
-				safeReports = append(safeReports, r.report)
-			}
+	for _, r := range reports {
+		acceptable := getReportAdjacentLevelsAcceptable(r, false)
+		if acceptable {
+			safeReports = append(safeReports, r.report)
 		}
 	}
 
@@ -221,15 +205,18 @@ func analyzeReports(input reports) {
 	fmt.Printf("The correct number of problem dampened reports is 680\n\n")
 }
 
-func getAdjacentCondition(report []int, i int, isDecreasing bool) bool {
+func getAdjacentCondition(report []int, i int) bool {
+	// report is expected to be directionally safe
+	var diff int
 	current := report[i]
 	max := 3
 	min := 1
 	next := report[i+1]
 
-	diff := next - current
-	if isDecreasing {
+	if report[i] > report[i+1] {
 		diff = current - next
+	} else {
+		diff = next - current
 	}
 
 	// fmt.Println("adjacent condition", i, report, "current", current, "next", next, "condition", diff < min || diff > max)
@@ -240,31 +227,31 @@ func getAdjacentCondition(report []int, i int, isDecreasing bool) bool {
 func getReportAdjacentLevelsAcceptable(report directionallySafeReport, dampening bool) bool {
 	// NOTE: All reports passed as report are assumed directionally safe
 	acceptable := true
-	// dampened := report.dampened
+	dampened := report.dampened
 	i := 0 // Artificially control loop index to psuedo recurse loop iteration
 	temp := make([]int, len(report.report))
 
 	copy(temp, report.report)
 
 	for range len(temp) - 1 {
-		// if !getAdjacentCondition(temp, i, isDecreasing) {
-		// 	if dampening && !dampened {
-		// 		dampened = true
-		// 		indexToRemove := i
-		//
-		// 		// if !isDecreasing {
-		// 		// 	indexToRemove = i + 1
-		// 		// }
-		//
-		// 		temp = deleteSliceIndex(temp, indexToRemove)
-		//
-		// 		// Do not increase index; "recursion" with updated temp
-		// 		continue
-		// 	} else {
-		// 		acceptable = false
-		// 		break
-		// 	}
-		// }
+		if !getAdjacentCondition(temp, i) {
+			if dampening && !dampened {
+				// dampened = true
+				// indexToRemove := i
+				//
+				// // if !isDecreasing {
+				// // 	indexToRemove = i + 1
+				// // }
+				//
+				// temp = deleteSliceIndex(temp, indexToRemove)
+				//
+				// // Do not increase index; "recursion" with updated temp
+				// continue
+			} else {
+				acceptable = false
+				break
+			}
+		}
 
 		i++
 	}
