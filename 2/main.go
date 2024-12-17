@@ -78,6 +78,76 @@ func getIndexToDelete(i int, lookahead bool) int {
 	return i
 }
 
+func handleReportConditionCheck(condition, dampened, dampening, safe, lookahead bool, input report, i int) (bool, bool, report, int, bool, bool) {
+	// NOTE hrcc = handle report condition check
+	hrccSafe := safe
+	hrccDampened := dampened
+	hrccI := i
+	hrccReport := make(report, len(input))
+	shouldBreak := false
+	shouldContinue := false
+
+	copy(hrccReport, input)
+
+	if !condition {
+		if dampened {
+			// fmt.Println("Dampened")
+			hrccSafe = false
+			shouldBreak = true
+		} else if dampening {
+			// fmt.Println("Dampening")
+			hrccDampened = true
+			hrccReport = deleteSliceIndex(hrccReport, getIndexToDelete(i, lookahead))
+
+			// By removing a value at index n, we are changing the values
+			// checked in the condition above, so we want to reduce the index
+			// by 1 to recheck the condition with the new value at index n
+			if i != 0 {
+				hrccI--
+			}
+
+			shouldContinue = true
+		} else {
+			// fmt.Println("Not dampening or dampened")
+
+			hrccSafe = false
+			shouldBreak = true
+		}
+	} else {
+		// fmt.Println("Increasing index")
+
+		hrccI++
+	}
+
+	return hrccSafe, hrccDampened, hrccReport, hrccI, shouldBreak, shouldContinue
+}
+
+func handleDuplicateReports(reports directionallySafeReports, report report) bool {
+	// If identical report is already in safeReports, don't add it again
+	// (consequence of looping through delete directions and have duplicate #'s at the last two indices)
+	if len(reports) > 0 && slices.Equal(reports[0].report, report) {
+		return true
+	}
+
+	return false
+}
+
+func getDirectionSafeReportUpdateSafeReports(safe bool, safeReports directionallySafeReports, report report, dampened bool) directionallySafeReports {
+	reports := make(directionallySafeReports, len(safeReports))
+
+	copy(reports, safeReports)
+
+	if safe && !handleDuplicateReports(safeReports, report) {
+		// fmt.Println("Safe", report, dampened)
+		safeReport := directionallySafeReport{
+			dampened: dampened,
+			report:   report,
+		}
+		reports = append(safeReports, safeReport)
+	}
+	return reports
+}
+
 func getDirectionallySafeReport(input report, dampening bool) directionallySafeReports {
 	deleteDirections := []string{"lookbehind", "lookahead"}
 	directions := []string{"increasing", "decreasing"}
@@ -101,55 +171,24 @@ func getDirectionallySafeReport(input report, dampening bool) directionallySafeR
 
 				// fmt.Println("Condition", condition)
 
-				if !condition {
-					if dampened {
-						// fmt.Println("Dampened")
-						safe = false
-						break
-					}
+				hrccSafe, hrccDampened, hrccReport, hrccI, shouldBreak, shouldContinue := handleReportConditionCheck(condition, dampened, dampening, safe, lookahead, report, i)
 
-					if dampening {
-						// fmt.Println("Dampening")
-						dampened = true
+				dampened = hrccDampened
+				i = hrccI
+				report = hrccReport
+				safe = hrccSafe
 
-						report = deleteSliceIndex(report, getIndexToDelete(i, lookahead))
-
-						// By removing a value at index n, we are changing the values
-						// checked in the condition above, so we want to reduce the index
-						// by 1 to recheck the condition with the new value at index n
-						if i != 0 {
-							i--
-						}
-
-						continue
-					}
-
-					// fmt.Println("Not dampening or dampened")
-
-					safe = false
+				if shouldBreak {
 					break
 				}
 
-				// fmt.Println("Increasing index")
-
-				i++
-			}
-
-			if safe {
-				// fmt.Println("Safe", report, dampened)
-
-				// If identical report is already in safeReports, don't add it again
-				// (consequence of looping through delete directions and have duplicate #'s at the last two indices)
-				if len(safeReports) > 0 && slices.Equal(safeReports[0].report, report) {
+				if shouldContinue {
 					continue
 				}
 
-				safeReport := directionallySafeReport{
-					dampened: dampened,
-					report:   report,
-				}
-				safeReports = append(safeReports, safeReport)
 			}
+
+			safeReports = getDirectionSafeReportUpdateSafeReports(safe, safeReports, report, dampened)
 		}
 	}
 
@@ -164,9 +203,9 @@ func getSafeReports(report report, dampening bool) reports {
 	for _, r := range reports {
 		acceptable := getReportAdjacentLevelsAcceptable(r, dampening)
 		if acceptable {
-			// These aren't the dampened adjacent level report values as much
-			// as a recognition that this report passed the adjacent levels
-			// analysis with dampening
+			// NOTE: getReportAdjacentLevelsAcceptable does not return modified reports
+			// so we're adding reports that are directionally safe only because we only
+			// care about the count of safe reports
 			safeReports = append(safeReports, r.report)
 		}
 	}
@@ -200,7 +239,6 @@ func analyzeReports(input reports) {
 		reports := getSafeReports(val, true)
 
 		for _, r := range reports {
-			fmt.Println("original:", val, "dampened:", r)
 			safeReports = append(safeReports, r)
 		}
 	}
@@ -228,48 +266,32 @@ func getAdjacentCondition(report []int, i int) bool {
 	return diff >= min && diff <= max
 }
 
-func getReportAdjacentLevelsAcceptable(report directionallySafeReport, dampening bool) bool {
-	// NOTE: All reports passed as report are assumed directionally safe
-	acceptable := true
-	dampened := report.dampened
+func getReportAdjacentLevelsAcceptable(dsr directionallySafeReport, dampening bool) bool {
+	dampened := dsr.dampened
 	i := 0 // Artificially control loop index to psuedo recurse loop iteration
-	temp := make([]int, len(report.report))
+	report := make([]int, len(dsr.report))
+	safe := true
 
-	copy(temp, report.report)
+	copy(report, dsr.report)
 
-	for range len(temp) - 1 {
-		if !getAdjacentCondition(temp, i) {
-			if dampened {
-				// fmt.Println("Dampened")
-				acceptable = false
-				break
-			}
+	for range len(report) - 1 {
+		hrccSafe, hrccDampened, hrccReport, hrccI, shouldBreak, shouldContinue := handleReportConditionCheck(getAdjacentCondition(report, i), dampened, dampening, safe, false, report, i)
 
-			if dampening {
-				// fmt.Println("Dampening")
-				dampened = true
-				temp = deleteSliceIndex(temp, getIndexToDelete(i, false))
-				fmt.Println(temp)
+		dampened = hrccDampened
+		i = hrccI
+		report = hrccReport
+		safe = hrccSafe
 
-				// By removing a value at index n, we are changing the values
-				// checked in the condition above, so we want to reduce the index
-				// by 1 to recheck the condition with the new value at index n
-				if i != 0 {
-					i--
-				}
-
-				// Do not increase index; "recursion" with updated temp
-				continue
-			} else {
-				acceptable = false
-				break
-			}
+		if shouldBreak {
+			break
 		}
 
-		i++
+		if shouldContinue {
+			continue
+		}
 	}
 
-	return acceptable
+	return safe
 }
 
 func parseRawInput(file *os.File) [][]int {
