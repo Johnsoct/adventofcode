@@ -162,8 +162,11 @@ func getSafeReports(report report, dampening bool) reports {
 	reports := getDirectionallySafeReport(report, dampening)
 
 	for _, r := range reports {
-		acceptable := getReportAdjacentLevelsAcceptable(r, false)
+		acceptable := getReportAdjacentLevelsAcceptable(r, dampening)
 		if acceptable {
+			// These aren't the dampened adjacent level report values as much
+			// as a recognition that this report passed the adjacent levels
+			// analysis with dampening
 			safeReports = append(safeReports, r.report)
 		}
 	}
@@ -178,6 +181,8 @@ func analyzeReports(input reports) {
 	for _, val := range input {
 		reports := getSafeReports(val, false)
 
+		// By storing the unsafe reports, we can perform more efficient
+		// dampening analysis by not running running against all inputs
 		if len(reports) == 0 {
 			unsafeReports = append(unsafeReports, val)
 		} else {
@@ -194,17 +199,14 @@ func analyzeReports(input reports) {
 	for _, val := range unsafeReports {
 		reports := getSafeReports(val, true)
 
-		if len(reports) == 0 {
-			fmt.Println("UNSAFEEE", val)
-		} else {
-			for _, r := range reports {
-				safeReports = append(safeReports, r)
-			}
+		for _, r := range reports {
+			fmt.Println("original:", val, "dampened:", r)
+			safeReports = append(safeReports, r)
 		}
 	}
 
 	fmt.Printf("Total problem dampened reports: %d\n", len(safeReports))
-	fmt.Printf("The correct number of problem dampened reports is 680\n\n")
+	fmt.Printf("The correct number of problem dampened reports is 710\n\n")
 }
 
 func getAdjacentCondition(report []int, i int) bool {
@@ -247,6 +249,7 @@ func getReportAdjacentLevelsAcceptable(report directionallySafeReport, dampening
 				// fmt.Println("Dampening")
 				dampened = true
 				temp = deleteSliceIndex(temp, getIndexToDelete(i, false))
+				fmt.Println(temp)
 
 				// By removing a value at index n, we are changing the values
 				// checked in the condition above, so we want to reduce the index

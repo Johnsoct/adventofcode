@@ -7,8 +7,10 @@ import (
 )
 
 type AdjacentTest struct {
-	dampened bool
-	Test
+	dampened  bool
+	dampening bool
+	pass      bool
+	report    report
 }
 type Test struct {
 	dampening bool
@@ -53,53 +55,30 @@ func TestDeleteSliceIndex(t *testing.T) {
 }
 
 func TestAdjacentLevels(t *testing.T) {
-	reports := directionallySafeReports{
-		{dampened: false, report: report{5, 4, 3, 2, 1}},
-		{dampened: false, report: report{10, 8, 6, 4, 2}},
-		{dampened: false, report: report{15, 12, 9, 6, 3}},
-	}
-	cases := adjacentTest{
-		dampening: false,
-		reports:   reports,
-	}
-	for _, test := range cases.reports {
-		pass := getReportAdjacentLevelsAcceptable(test, cases.dampening)
-		if !pass {
-			fmt.Printf("Decreasing, non-dampening, safe:" + styleBAD("bad") + "\n")
-		}
-	}
-
-	reports = directionallySafeReports{
-		{dampened: false, report: report{5, 4, 3, 2, 1}},
-		{dampened: false, report: report{10, 8, 6, 4, 2}},
-		{dampened: false, report: report{15, 12, 9, 6, 3}},
-		{dampened: false, report: report{8, 4, 3, 2, 1}},
-	}
-	cases = adjacentTest{
-		dampening: true,
-		reports:   reports,
-	}
-	for _, test := range cases.reports {
-		pass := getReportAdjacentLevelsAcceptable(test, cases.dampening)
-		if !pass {
-			fmt.Printf("Decreasing, dampening, dry, safe:" + styleBAD("bad") + "\n")
-		}
-	}
-
-	reports = directionallySafeReports{
-		{dampened: false, report: report{1, 2, 3, 4, 5}},
-		{dampened: false, report: report{2, 4, 6, 8, 10}},
-		{dampened: false, report: report{3, 6, 9, 12, 15}},
-		{dampened: false, report: report{1, 2, 3, 4, 8}},
-		{dampened: false, report: report{19, 23, 26, 29, 31, 32}},
-	}
 	tests := []AdjacentTest{
-		{dampening: false, dampened: false, input: report{1, 2, 3, 4, 5}, output: reports{{1, 2, 3, 4, 5}}},
+		{dampened: false, dampening: false, pass: true, report: report{1, 2, 3, 4, 5}},
+		{dampened: false, dampening: false, pass: true, report: report{2, 4, 6, 8, 10}},
+		{dampened: false, dampening: false, pass: true, report: report{3, 6, 9, 12, 15}},
+		{dampened: false, dampening: false, pass: false, report: report{1, 2, 3, 4, 8}},
+		{dampened: false, dampening: false, pass: false, report: report{19, 23, 26, 29, 31, 32}},
+		{dampened: false, dampening: false, pass: true, report: report{5, 4, 3, 2, 1}},
+		{dampened: false, dampening: false, pass: true, report: report{10, 8, 6, 4, 2}},
+		{dampened: false, dampening: false, pass: true, report: report{15, 12, 9, 6, 3}},
+		{dampened: false, dampening: false, pass: false, report: report{89, 84, 82, 81, 80}},
+		{dampened: false, dampening: false, pass: false, report: report{17, 22, 24, 25, 27, 29}},
+		{dampened: false, dampening: true, pass: true, report: report{5, 4, 3, 2, 1}},
+		{dampened: false, dampening: true, pass: true, report: report{10, 8, 6, 4, 2}},
+		{dampened: false, dampening: true, pass: true, report: report{15, 12, 9, 6, 3}},
+		{dampened: false, dampening: true, pass: true, report: report{8, 4, 3, 2, 1}},
+		{dampened: false, dampening: true, pass: true, report: report{1, 2, 3, 4, 8}},
+		{dampened: false, dampening: true, pass: true, report: report{19, 23, 26, 29, 31, 32}},
+		{dampened: false, dampening: true, pass: true, report: report{89, 84, 82, 81, 80}},
+		{dampened: false, dampening: true, pass: true, report: report{22, 24, 25, 27, 29}},
 	}
 	for _, test := range tests {
-		pass := getReportAdjacentLevelsAcceptable(test.input, test.dampening)
-		if !pass {
-			fmt.Printf("Increasing, dampening, dry, safe:" + styleBAD("bad") + "\n")
+		pass := getReportAdjacentLevelsAcceptable(directionallySafeReport{dampened: test.dampened, report: test.report}, test.dampening)
+		if pass != test.pass {
+			t.Errorf("Dampened: %t; Dampening: %t; Report: %d\n", test.dampened, test.dampening, test.report)
 		}
 	}
 }
@@ -110,12 +89,14 @@ func TestGetDirectionallySafeReport(t *testing.T) {
 		{dampening: false, input: report{2, 4, 6, 8, 10}, output: reports{{2, 4, 6, 8, 10}}},
 		{dampening: false, input: report{3, 6, 9, 12, 15}, output: reports{{3, 6, 9, 12, 15}}},
 		{dampening: false, input: report{87, 90, 93, 94, 98}, output: reports{{87, 90, 93, 94, 98}}},
+		{dampening: false, input: report{89, 84, 82, 81, 80}, output: reports{{89, 84, 82, 81, 80}}},
 		{dampening: false, input: report{100, 200, 300, 400, 500}, output: reports{{100, 200, 300, 400, 500}}},
 		{dampening: true, input: report{60, 64, 65, 69, 70, 73, 74, 74}, output: reports{{60, 64, 65, 69, 70, 73, 74}}},
 		{dampening: true, input: report{37, 41, 43, 50, 52, 54, 52}, output: reports{{37, 41, 43, 50, 52, 54}}},
 		{dampening: true, input: report{61, 59, 62, 63, 65, 66, 69, 72}, output: reports{{59, 62, 63, 65, 66, 69, 72}, {61, 62, 63, 65, 66, 69, 72}}},
 		{dampening: true, input: report{53, 58, 65, 66, 63}, output: reports{{53, 58, 65, 66}}},
 		{dampening: true, input: report{15, 19, 21, 26, 28, 28}, output: reports{{15, 19, 21, 26, 28}}},
+		{dampening: true, input: report{89, 84, 82, 81, 80}, output: reports{{89, 84, 82, 81, 80}}},
 		{dampening: true, input: report{8, 7, 11, 12, 17}, output: reports{{7, 11, 12, 17}, {8, 11, 12, 17}}},
 		{dampening: true, input: report{51, 53, 54, 55, 57, 60, 63, 63}, output: reports{{51, 53, 54, 55, 57, 60, 63}}},
 		{dampening: true, input: report{27, 29, 30, 33, 34, 35, 37, 35}, output: reports{{27, 29, 30, 33, 34, 35, 37}}},
