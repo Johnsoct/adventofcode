@@ -6,11 +6,11 @@ import (
 	"testing"
 )
 
-type adjacentTest struct {
-	dampening bool
-	reports   directionallySafeReports
+type AdjacentTest struct {
+	dampened bool
+	Test
 }
-type test struct {
+type Test struct {
 	dampening bool
 	input     report
 	output    reports
@@ -93,12 +93,11 @@ func TestAdjacentLevels(t *testing.T) {
 		{dampened: false, report: report{1, 2, 3, 4, 8}},
 		{dampened: false, report: report{19, 23, 26, 29, 31, 32}},
 	}
-	cases = adjacentTest{
-		dampening: true,
-		reports:   reports,
+	tests := []AdjacentTest{
+		{dampening: false, dampened: false, input: report{1, 2, 3, 4, 5}, output: reports{{1, 2, 3, 4, 5}}},
 	}
-	for _, test := range cases.reports {
-		pass := getReportAdjacentLevelsAcceptable(test, cases.dampening)
+	for _, test := range tests {
+		pass := getReportAdjacentLevelsAcceptable(test.input, test.dampening)
 		if !pass {
 			fmt.Printf("Increasing, dampening, dry, safe:" + styleBAD("bad") + "\n")
 		}
@@ -106,7 +105,7 @@ func TestAdjacentLevels(t *testing.T) {
 }
 
 func TestGetDirectionallySafeReport(t *testing.T) {
-	tests := []test{
+	tests := []Test{
 		{dampening: false, input: report{1, 2, 3, 4, 5}, output: reports{{1, 2, 3, 4, 5}}},
 		{dampening: false, input: report{2, 4, 6, 8, 10}, output: reports{{2, 4, 6, 8, 10}}},
 		{dampening: false, input: report{3, 6, 9, 12, 15}, output: reports{{3, 6, 9, 12, 15}}},

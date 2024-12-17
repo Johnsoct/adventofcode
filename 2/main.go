@@ -149,8 +149,6 @@ func getDirectionallySafeReport(input report, dampening bool) directionallySafeR
 					report:   report,
 				}
 				safeReports = append(safeReports, safeReport)
-			} else {
-				// fmt.Println("UNSAFE", report, dampening, dampened, "original", input)
 			}
 		}
 	}
@@ -196,8 +194,12 @@ func analyzeReports(input reports) {
 	for _, val := range unsafeReports {
 		reports := getSafeReports(val, true)
 
-		for _, r := range reports {
-			safeReports = append(safeReports, r)
+		if len(reports) == 0 {
+			fmt.Println("UNSAFEEE", val)
+		} else {
+			for _, r := range reports {
+				safeReports = append(safeReports, r)
+			}
 		}
 	}
 
@@ -206,7 +208,7 @@ func analyzeReports(input reports) {
 }
 
 func getAdjacentCondition(report []int, i int) bool {
-	// report is expected to be directionally safe
+	// NOTE: report is expected to be directionally safe
 	var diff int
 	current := report[i]
 	max := 3
@@ -235,18 +237,26 @@ func getReportAdjacentLevelsAcceptable(report directionallySafeReport, dampening
 
 	for range len(temp) - 1 {
 		if !getAdjacentCondition(temp, i) {
-			if dampening && !dampened {
-				// dampened = true
-				// indexToRemove := i
-				//
-				// // if !isDecreasing {
-				// // 	indexToRemove = i + 1
-				// // }
-				//
-				// temp = deleteSliceIndex(temp, indexToRemove)
-				//
-				// // Do not increase index; "recursion" with updated temp
-				// continue
+			if dampened {
+				// fmt.Println("Dampened")
+				acceptable = false
+				break
+			}
+
+			if dampening {
+				// fmt.Println("Dampening")
+				dampened = true
+				temp = deleteSliceIndex(temp, getIndexToDelete(i, false))
+
+				// By removing a value at index n, we are changing the values
+				// checked in the condition above, so we want to reduce the index
+				// by 1 to recheck the condition with the new value at index n
+				if i != 0 {
+					i--
+				}
+
+				// Do not increase index; "recursion" with updated temp
+				continue
 			} else {
 				acceptable = false
 				break
